@@ -1,0 +1,35 @@
+[package]
+name = "kmedoids"
+version = "0.1.0"
+authors = ["Erich Schubert <erich.schubert@tu-dortmund.de>"]
+homepage = "https://github.com/kno10/rust-kmedoids"
+description = "k-Medoids clustering with the FasterPAM algorithm"
+keywords = ["clustering", "machine-learning", "matrix", "optimization", "algorithm"]
+categories = ["science", "mathematics"]
+license = "GPL-3.0-or-later"
+edition = "2018"
+repository = "https://github.com/kno10/rust-kmedoids"
+readme = "README.md"
+
+[lib]
+name = "kmedoids"
+path = "src/kmedoids.rs"
+test = true
+doc = true
+
+[features]
+default = []
+# Enable additional assertions
+assertions = []
+
+[[example]]
+name = "orlib-kmedoids"
+path = "examples/orlib-kmedoids.rs"
+
+[dependencies]
+ndarray = "0.14.0"
+num-traits = "0.2.14"
+rand = "0.8.0"
+
+[profile.release]
+debug = true
