@@ -1,13 +1,13 @@
 [package]
+edition = "2018"
 name = "kmedoids"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Erich Schubert <erich.schubert@tu-dortmund.de>"]
 homepage = "https://github.com/kno10/rust-kmedoids"
 description = "k-Medoids clustering with the FasterPAM algorithm"
 keywords = ["clustering", "machine-learning", "matrix", "optimization", "algorithm"]
 categories = ["science", "mathematics"]
 license = "GPL-3.0-or-later"
-edition = "2018"
 repository = "https://github.com/kno10/rust-kmedoids"
 readme = "README.md"
 
@@ -18,18 +18,23 @@ test = true
 doc = true
 
 [features]
-default = []
+default = ["rand", "ndarray"]
 # Enable additional assertions
 assertions = []
 
 [[example]]
 name = "orlib-kmedoids"
 path = "examples/orlib-kmedoids.rs"
+required-features = ["ndarray", "rand"]
 
 [dependencies]
-ndarray = "0.14.0"
 num-traits = "0.2.14"
-rand = "0.8.0"
+ndarray = {version = "0.14.0", optional = true}
+rand  = {version = "0.8.0", optional = true}
+
+[dev-dependencies]
+ndarray = "0.14.0"
+rand  = "0.8.0"
 
 [profile.release]
 debug = true

@@ -1,3 +1,9 @@
+//! Add without overflow, for both integer and float types.
+//!
+//! This is pre-generated for standard numerical types such as i64 and f64.
+//!
+//! You only need to touch this if you want to extend this to additional numerical types.
+
 /// Add without overflow, for both integer and float types.
 ///
 /// This is pre-generated for standard numerical types such as i64 and f64.

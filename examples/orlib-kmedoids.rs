@@ -14,7 +14,10 @@ struct Problem<N> {
 	k: usize,
 }
 
-fn all_pairs_shortest_path<N: NumOps + PartialOrd + kmedoids::SafeAdd + Copy>(mat: &mut Array2<N>) {
+fn all_pairs_shortest_path<N>(mat: &mut Array2<N>)
+where
+	N: NumOps + PartialOrd + kmedoids::SafeAdd + Copy,
+{
 	let n = mat.shape()[0];
 	assert_eq!(n, mat.shape()[1]);
 	// Floyd's all pairs shortest path
@@ -31,14 +34,9 @@ fn all_pairs_shortest_path<N: NumOps + PartialOrd + kmedoids::SafeAdd + Copy>(ma
 	}
 }
 
-fn read_orlib<
-	R: Read,
-	T: NumOps + Zero + PartialOrd + kmedoids::SafeAdd + Copy + std::str::FromStr,
->(
-	io: R,
-	default_value: T,
-) -> Result<Problem<T>, Box<dyn Error>>
+fn read_orlib<R: Read, T>(io: R, default_value: T) -> Result<Problem<T>, Box<dyn Error>>
 where
+	T: NumOps + Zero + PartialOrd + kmedoids::SafeAdd + Copy + std::str::FromStr,
 	// Rust black magic:
 	T::Err: std::error::Error + 'static,
 {
