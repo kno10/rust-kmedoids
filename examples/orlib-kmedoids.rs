@@ -1,3 +1,5 @@
+// If you intend to use this for benchmarking, add a shuffle step and use fixed random seeds.
+// Because of ties in ORLib data sets, order matters even when you use fixed random seeds.
 use kmedoids::{fasterpam, random_initialization};
 use ndarray::Array2;
 use num_traits::{NumOps, Zero};
@@ -61,18 +63,21 @@ where
 	for line in buffer.lines() {
 		let ln = line?;
 		let mut split = ln.split_whitespace();
-		let x: usize = split.next().expect("no x").parse()?;
-		let y: usize = split.next().expect("no y").parse()?;
-		assert_ne!(x, y);
-		let v: T = split.next().expect("no v").parse()?;
-		mat[[x - 1, y - 1]] = v;
-		mat[[y - 1, x - 1]] = v;
+		let x1: usize = split.next().expect("no x").parse()?;
+		let x2: usize = split.next().expect("no y").parse()?;
+		assert_ne!(x1, x2);
+		let d: T = split.next().expect("no v").parse()?;
+		mat[[x1 - 1, x2 - 1]] = d;
+		mat[[x2 - 1, x1 - 1]] = d;
 	}
 	for x in 0..n {
 		mat[[x, x]] = T::zero();
 	}
+	let start = Instant::now();
 	all_pairs_shortest_path(&mut mat);
-	return Ok(Problem { data: mat, k: k });
+	let duration = start.elapsed();
+	println!("All-pairs shortest path took: {:?}", duration);
+	Ok(Problem { data: mat, k })
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -81,11 +86,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 	let mut rand = rand::thread_rng();
 	let start = Instant::now();
 	let mut meds = random_initialization(prob.data.shape()[0], prob.k, &mut rand);
-	let (loss, swaps, iter, _) = fasterpam(&prob.data, &mut meds, 100);
+	let (loss, _, iter, swaps) = fasterpam(&prob.data, &mut meds, 100);
 	let duration = start.elapsed();
 	println!("FasterPAM final loss: {}", loss);
 	println!("FasterPAM swaps performed: {}", swaps);
 	println!("FasterPAM number of iterations: {}", iter);
 	println!("FasterPAM optimization time: {:?}", duration);
-	return Ok(());
+	Ok(())
 }

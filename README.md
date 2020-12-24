@@ -1,10 +1,13 @@
 # k-Medoids Clustering in Rust with FasterPAM
 
+This Rust crate implements k-medoids clustering with PAM.
+It can be used with arbitrary dissimilarites, as it requires a dissimilarity matrix as input.
+
 For further details on the implemented algorithm FasterPAM, see:
 
 > Erich Schubert, Peter J. Rousseeuw  
-> **Fast and Eager k-Medoids Clustering:  
-> O(k) Runtime Improvement of the PAM, CLARA, and CLARANS Algorithms**  
+> **Fast and Eager k-Medoids Clustering:**  
+> **O(k) Runtime Improvement of the PAM, CLARA, and CLARANS Algorithms**  
 > Under review at Information Systems, Elsevier.  
 > Preprint: <https://arxiv.org/abs/2008.05171>
 
@@ -20,11 +23,29 @@ This is a port of the original Java code from [ELKI](https://elki-project.github
 
 If you use this code in scientific work, please cite above papers. Thank you.
 
+
+## Example
+
+```
+let dissim = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
+let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+let (loss, assingment, n_iter, n_swap) = kmedoids::fasterpam(&dissim, &mut meds, 100);
+println!("Loss is: {}", loss);
+```
+
+## Implemented Algorithms
+
+* **FasterPAM** (Schubert and Rousseeuw, 2020, 2021)
+* FastPAM1 (Schubert and Rousseeuw, 2019, 2021)
+* PAM (Kaufman and Rousseeuw, 1987) with BUILD and SWAP
+
+The k-means style "alternating" algorithm is currently not implemented, because the result quality is often very poor.
+
 ## Rust Dependencies
 
-* [ndarray](https://docs.rs/ndarray/) for arrays
 * [num-traits](https://docs.rs/num-traits/) for supporting different numeric types
-* [rand](https://docs.rs/rand/) for random initialization
+* [ndarray](https://docs.rs/ndarray/) for arrays (optional)
+* [rand](https://docs.rs/rand/) for random initialization (optional)
 
 ## License: GPL-3 or later
 
@@ -43,6 +64,6 @@ If you use this code in scientific work, please cite above papers. Thank you.
 
 ## FAQ: Why GPL and not Apache/MIT/BSD?
 
-Because copyleft software such as Linux got us where we are now.
+Because copyleft software like Linux is what built the open-source community.
 
 Tit for tat: you get to use my code, I get to use your code.

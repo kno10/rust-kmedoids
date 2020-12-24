@@ -3,6 +3,7 @@
 //! Includes adapters for `ndarray::Array2` and a serialized lower triangular matrix in a `Vec`.
 
 /// Adapter trait for accessing different types of arrays
+#[allow(clippy::len_without_is_empty)]
 pub trait ArrayAdapter<N: Copy> {
 	/// Get the length of an array structure
 	fn len(&self) -> usize;
@@ -17,15 +18,15 @@ pub trait ArrayAdapter<N: Copy> {
 impl<N: Copy> ArrayAdapter<N> for ndarray::Array2<N> {
 	#[inline]
 	fn len(&self) -> usize {
-		return self.shape()[0];
+		self.shape()[0]
 	}
 	#[inline]
 	fn is_square(&self) -> bool {
-		return self.shape()[0] == self.shape()[1];
+		self.shape()[0] == self.shape()[1]
 	}
 	#[inline]
 	fn get(&self, x: usize, y: usize) -> N {
-		return self[[x, y]];
+		self[[x, y]]
 	}
 }
 
@@ -35,7 +36,7 @@ impl<N: Copy> ArrayAdapter<N> for ndarray::Array2<N> {
 /// ```
 /// let data = kmedoids::arrayadapter::LowerTriangle { n: 4, data: vec![1, 2, 3, 4, 5, 6] };
 /// let mut meds = vec![0, 1];
-///	let (loss, numswap, numiter, assignment) = kmedoids::fasterpam(&data, &mut meds, 10);
+/// let (loss, numswap, numiter, assignment) = kmedoids::fasterpam(&data, &mut meds, 10);
 /// println!("Loss is {}", loss);
 /// ```
 #[derive(Debug, Clone)]
@@ -49,20 +50,18 @@ pub struct LowerTriangle<N> {
 impl<N: Copy + num_traits::Zero> ArrayAdapter<N> for LowerTriangle<N> {
 	#[inline]
 	fn len(&self) -> usize {
-		return self.n;
+		self.n
 	}
 	#[inline]
 	fn is_square(&self) -> bool {
-		return self.data.len() == self.n * (self.n - 1) >> 1;
+		self.data.len() == (self.n * (self.n - 1)) >> 1
 	}
 	#[inline]
 	fn get(&self, x: usize, y: usize) -> N {
-		if x == y {
-			return N::zero();
-		} else if x < y {
-			return self.data[((y * (y - 1)) >> 1) + x];
-		} else {
-			return self.data[((x * (x - 1)) >> 1) + y];
+		match x.cmp(&y) {
+			std::cmp::Ordering::Less => self.data[((y * (y - 1)) >> 1) + x],
+			std::cmp::Ordering::Greater => self.data[((x * (x - 1)) >> 1) + y],
+			std::cmp::Ordering::Equal => N::zero(),
 		}
 	}
 }

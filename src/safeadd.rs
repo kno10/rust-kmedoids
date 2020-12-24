@@ -21,11 +21,11 @@ macro_rules! safeadd_integer_impl {
 		impl $trait_name for $t {
 			#[inline]
 			fn safe_add(self, o: Self) -> Self {
-				return self.saturating_add(o);
+				self.saturating_add(o)
 			}
 			#[inline]
 			fn safe_inc(&mut self, o: Self) {
-				*self = self.saturating_add(o);
+				*self = self.saturating_add(o)
 			}
 		}
 	)*}
@@ -35,12 +35,12 @@ macro_rules! safeadd_float_impl {
 		impl $trait_name for $t {
 			#[inline]
 			fn safe_add(self, o: Self) -> Self {
-				return self + o;
+				self + o
 			}
 
 			#[inline]
 			fn safe_inc(&mut self, o: Self) {
-				*self += o;
+				*self += o
 			}
 		}
 	)*}
