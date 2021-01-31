@@ -4,7 +4,7 @@
 
 /// Adapter trait for accessing different types of arrays
 #[allow(clippy::len_without_is_empty)]
-pub trait ArrayAdapter<N: Copy> {
+pub trait ArrayAdapter<N> {
 	/// Get the length of an array structure
 	fn len(&self) -> usize;
 	/// Verify that it is a square matrix
@@ -13,9 +13,13 @@ pub trait ArrayAdapter<N: Copy> {
 	fn get(&self, x: usize, y: usize) -> N;
 }
 
-/// Adapter trait for using `ndarray::Array2`
+/// Adapter trait for using `ndarray::Array2` and similar
 #[cfg(feature = "ndarray")]
-impl<N: Copy> ArrayAdapter<N> for ndarray::Array2<N> {
+impl<N> ArrayAdapter<N::Elem> for ndarray::ArrayBase<N, ndarray::Ix2>
+where
+	N: ndarray::Data,
+	N::Elem: Copy,
+{
 	#[inline]
 	fn len(&self) -> usize {
 		self.shape()[0]
@@ -25,7 +29,7 @@ impl<N: Copy> ArrayAdapter<N> for ndarray::Array2<N> {
 		self.shape()[0] == self.shape()[1]
 	}
 	#[inline]
-	fn get(&self, x: usize, y: usize) -> N {
+	fn get(&self, x: usize, y: usize) -> N::Elem {
 		self[[x, y]]
 	}
 }

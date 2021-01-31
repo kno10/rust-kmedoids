@@ -1,7 +1,7 @@
 [package]
 edition = "2018"
 name = "kmedoids"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Erich Schubert <erich.schubert@tu-dortmund.de>"]
 description = "k-Medoids clustering with the FasterPAM algorithm"
 homepage = "https://github.com/kno10/rust-kmedoids"
@@ -23,13 +23,13 @@ path = "examples/orlib-kmedoids.rs"
 required-features = ["ndarray", "rand"]
 
 [dependencies]
-num-traits = "0.2.14"
-ndarray = {version = "0.14.0", optional = true}
-rand  = {version = "0.8.0", optional = true}
+num-traits = "0.2"
+ndarray = {version = "0.14", optional = true}
+rand  = {version = "0.8", optional = true}
 
 [dev-dependencies]
-ndarray = "0.14.0"
-rand  = "0.8.0"
+ndarray = "0.14"
+rand  = "0.8"
 
 [features]
 default = ["rand", "ndarray"]

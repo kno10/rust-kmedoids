@@ -1,5 +1,10 @@
 # Changelog
 
+## kmedoids 0.1.3 (2021-01-31)
+
+- improve ndarray adapter to accept views
+- relax version dependencies slightly
+
 ## kmedoids 0.1.2 (2020-12-24)
 
 - reordered the returned values by importance to end users
