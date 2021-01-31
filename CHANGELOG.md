@@ -1,5 +1,10 @@
 # Changelog
 
+## kmedoids 0.1.5 (2021-01-31)
+
+- add Alternating algorithm for reference
+- move bench.rs to benches/
+
 ## kmedoids 0.1.4 (2021-01-31)
 
 - remove forgotten println in pam reference method

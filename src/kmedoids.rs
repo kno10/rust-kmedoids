@@ -32,10 +32,6 @@
 pub mod arrayadapter;
 pub mod safeadd;
 
-#[cfg(test)]
-#[cfg(bench)]
-pub mod bench;
-
 pub use crate::arrayadapter::ArrayAdapter;
 pub use crate::safeadd::SafeAdd;
 use num_traits::{NumAssignOps, Signed, Zero};
@@ -770,11 +766,146 @@ where
 	(nloss, assi, meds, n_iter, n_swap) // also return medoids
 }
 
+/// Assign each to the nearest medoid, return loss
+#[inline]
+fn assign_nearest<M, N>(mat: &M, med: &[usize], data: &mut Vec<usize>) -> N
+where
+	N: NumAssignOps + Zero + PartialOrd + Copy + SafeAdd,
+	M: ArrayAdapter<N>,
+{
+	let n = mat.len();
+	let k = med.len();
+	assert!(mat.is_square(), "Dissimilarity matrix is not square");
+	assert!(n <= u32::MAX as usize, "N is too large");
+	assert!(k > 0 && k < u32::MAX as usize, "invalid N");
+	assert!(k <= n, "k must be at most N");
+	let firstcenter = med[0];
+	let mut loss: N = N::zero();
+	for i in 0..n {
+		let mut cur = 0;
+		let mut best = mat.get(i, firstcenter);
+		for m in 1..k {
+			let dm = mat.get(i, med[m]);
+			if dm < best || i == med[m] {
+				cur = m;
+				best = dm;
+			}
+		}
+		loss.safe_inc(best);
+		assert!(data.len() >= i);
+		if data.len() == i {
+			data.push(cur);
+		} else {
+			data[i] = cur;
+		}
+	}
+	loss
+}
+
+// Choose the best medoid within a partition
+pub fn choose_medoid_within_partition<M, N>(
+	mat: &M,
+	assi: &[usize],
+	med: &mut [usize],
+	m: usize,
+) -> bool
+where
+	N: NumAssignOps + Signed + Zero + PartialOrd + Copy + SafeAdd + std::fmt::Display,
+	M: ArrayAdapter<N>,
+{
+	let first = med[m];
+	let mut best = first;
+	let mut sumb = N::zero();
+	for (i, a) in assi.iter().enumerate() {
+		if first != i && *a == m {
+			sumb.safe_inc(mat.get(first, i));
+		}
+	}
+	for (j, aj) in assi.iter().enumerate() {
+		if j != first && *aj == m {
+			let mut sumj = N::zero();
+			for (i, ai) in assi.iter().enumerate() {
+				if i != j && *ai == m {
+					sumj.safe_inc(mat.get(j, i));
+				}
+			}
+			if sumj < sumb {
+				best = j;
+				sumb = sumj;
+			}
+		}
+	}
+	med[m] = best;
+	best != first
+}
+
+/// Run the Alternating algorithm, a k-means-style alternate optimization.
+///
+/// This is fairly fast (also O(n²) as the FasterPAM method), but because the
+/// newly chosen medoid must cover the entire existing cluster, it tends to
+/// get stuck in worse local optima as the alternatives. Hence, it is not
+/// really recommended to use this algorithm (also known as "Alternate" in
+/// classic facility location literature, and re-invented by Park and Jun 2009)
+///
+/// * type `M` - matrix data type such as `ndarray::Array2` or `kmedoids::arrayadapter::LowerTriangle`
+/// * type `N` - number data type such as `i32` or `f64` (must be signed)
+/// * `mat` - a pairwise distance matrix
+/// * `med` - the list of medoids
+/// * `maxiter` - the maximum number of iterations allowed
+///
+/// returns a tuple containing:
+/// * the final loss
+/// * the final cluster assignment
+/// * the number of iterations needed
+///
+/// ## Panics
+///
+/// * panics when the dissimilarity matrix is not square
+/// * panics when k is 0 or larger than N
+///
+/// ## Example
+/// Given a dissimilarity matrix of size 4 x 4, use:
+/// ```
+/// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
+/// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+/// let (loss, assi, n_iter) = kmedoids::alternating(&data, &mut meds, 100);
+/// println!("Loss is: {}", loss);
+/// ```
+pub fn alternating<M, N>(
+	mat: &M,
+	mut med: &mut Vec<usize>,
+	maxiter: usize,
+) -> (N, Vec<usize>, usize)
+where
+	N: NumAssignOps + Signed + Zero + PartialOrd + Copy + SafeAdd + std::fmt::Display,
+	M: ArrayAdapter<N>,
+{
+	let n = mat.len();
+	let k = med.len();
+	let mut assi = Vec::<usize>::with_capacity(n);
+	let mut loss = assign_nearest(mat, &med, &mut assi);
+	let mut iter = 0;
+	while iter < maxiter {
+		iter += 1;
+		let mut changed = false;
+		for i in 0..k {
+			changed |= choose_medoid_within_partition(mat, &assi, &mut med, i);
+		}
+		if !changed {
+			break;
+		}
+		loss = assign_nearest(mat, &med, &mut assi);
+	}
+	(loss, assi, iter)
+}
+
 #[cfg(test)]
 mod tests {
 	// TODO: use a larger, much more interesting example.
 
-	use crate::{arrayadapter::LowerTriangle, fasterpam, fastpam1, pam, pam_build, pam_swap};
+	use crate::{
+		alternating, arrayadapter::LowerTriangle, fasterpam, fastpam1, pam, pam_build, pam_swap,
+	};
 	fn assert_array(result: Vec<usize>, expect: Vec<usize>, msg: &'static str) {
 		assert!(result.iter().zip(expect.iter()).all(|(a, b)| a == b), msg);
 	}
@@ -849,5 +980,19 @@ mod tests {
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
+	}
+
+	#[test]
+	fn testalternating() {
+		let data = LowerTriangle {
+			n: 5,
+			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
+		};
+		let mut meds = vec![0, 1];
+		let (loss, assi, n_iter) = alternating(&data, &mut meds, 10);
+		assert_eq!(n_iter, 3, "iterations not as expected");
+		assert_eq!(loss, 4, "loss not as expected");
+		assert_array(assi, vec![1, 1, 1, 0, 0], "assignment not as expected");
+		assert_array(meds, vec![3, 0], "medoids not as expected");
 	}
 }
