@@ -1,5 +1,9 @@
 # Changelog
 
+## kmedoids 0.1.4 (2021-01-31)
+
+- remove forgotten println in pam reference method
+
 ## kmedoids 0.1.3 (2021-01-31)
 
 - improve ndarray adapter to accept views

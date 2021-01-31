@@ -766,9 +766,6 @@ where
 	let mut meds = Vec::<usize>::with_capacity(k);
 	let mut data = Vec::<Rec<N>>::with_capacity(n);
 	let loss = pam_build_initialize(mat, &mut meds, &mut data, k);
-	for o in data.iter() {
-		println!("{} {} {} {}", o.near.i, o.near.d, o.seco.i, o.seco.d);
-	}
 	let (nloss, assi, n_iter, n_swap) = pam_optimize(mat, &mut meds, &mut data, maxiter, loss);
 	(nloss, assi, meds, n_iter, n_swap) // also return medoids
 }
