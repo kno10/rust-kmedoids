@@ -1,5 +1,11 @@
 # Changelog
 
+## kmedoids 0.1.6 (2021-09-02)
+
+- update reference with published journal version
+- update dependency versions
+- improve some issue with ArrayBase
+
 ## kmedoids 0.1.5 (2021-01-31)
 
 - add Alternating algorithm for reference

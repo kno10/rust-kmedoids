@@ -907,7 +907,7 @@ mod tests {
 		alternating, arrayadapter::LowerTriangle, fasterpam, fastpam1, pam, pam_build, pam_swap,
 	};
 	fn assert_array(result: Vec<usize>, expect: Vec<usize>, msg: &'static str) {
-		assert!(result.iter().zip(expect.iter()).all(|(a, b)| a == b), msg);
+		assert!(result.iter().zip(expect.iter()).all(|(a, b)| a == b), "{}", msg);
 	}
 
 	#[test]

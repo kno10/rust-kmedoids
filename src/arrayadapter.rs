@@ -15,10 +15,10 @@ pub trait ArrayAdapter<N> {
 
 /// Adapter trait for using `ndarray::Array2` and similar
 #[cfg(feature = "ndarray")]
-impl<N> ArrayAdapter<N::Elem> for ndarray::ArrayBase<N, ndarray::Ix2>
+impl<A,N> ArrayAdapter<N> for ndarray::ArrayBase<A, ndarray::Ix2>
 where
-	N: ndarray::Data,
-	N::Elem: Copy,
+	A: ndarray::Data<Elem=N>,
+	N: Copy,
 {
 	#[inline]
 	fn len(&self) -> usize {
@@ -29,7 +29,7 @@ where
 		self.shape()[0] == self.shape()[1]
 	}
 	#[inline]
-	fn get(&self, x: usize, y: usize) -> N::Elem {
+	fn get(&self, x: usize, y: usize) -> N {
 		self[[x, y]]
 	}
 }
