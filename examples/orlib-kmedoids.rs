@@ -18,7 +18,7 @@ struct Problem<N> {
 
 fn all_pairs_shortest_path<N>(mat: &mut Array2<N>)
 where
-	N: NumOps + PartialOrd + kmedoids::SafeAdd + Copy,
+	N: NumOps + PartialOrd + Copy,
 {
 	let n = mat.shape()[0];
 	assert_eq!(n, mat.shape()[1]);
@@ -26,7 +26,7 @@ where
 	for i in 0..n {
 		for x in 0..n {
 			for y in (x + 1)..n {
-				let m = mat[[x, i]].safe_add(mat[[i, y]]);
+				let m = mat[[x, i]] + mat[[i, y]];
 				if m < mat[[x, y]] {
 					mat[[y, x]] = m;
 					mat[[x, y]] = m;
@@ -38,7 +38,7 @@ where
 
 fn read_orlib<R: Read, T>(io: R, default_value: T) -> Result<Problem<T>, Box<dyn Error>>
 where
-	T: NumOps + Zero + PartialOrd + kmedoids::SafeAdd + Copy + std::str::FromStr,
+	T: NumOps + Zero + PartialOrd + Copy + std::str::FromStr,
 	// Rust black magic:
 	T::Err: std::error::Error + 'static,
 {
@@ -80,13 +80,13 @@ where
 	Ok(Problem { data: mat, k })
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>>{
 	let nam = env::args().nth(1).expect("no file name given");
 	let prob = read_orlib(File::open(nam)?, i32::MAX)?;
 	let mut rand = rand::thread_rng();
 	let start = Instant::now();
 	let mut meds = random_initialization(prob.data.shape()[0], prob.k, &mut rand);
-	let (loss, _, iter, swaps) = fasterpam(&prob.data, &mut meds, 100);
+	let (loss, _, iter, swaps) : (i64, _, _, _) = fasterpam(&prob.data, &mut meds, 100)?;
 	let duration = start.elapsed();
 	println!("FasterPAM final loss: {}", loss);
 	println!("FasterPAM swaps performed: {}", swaps);

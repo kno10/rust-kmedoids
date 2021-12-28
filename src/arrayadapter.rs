@@ -15,9 +15,9 @@ pub trait ArrayAdapter<N> {
 
 /// Adapter trait for using `ndarray::Array2` and similar
 #[cfg(feature = "ndarray")]
-impl<A,N> ArrayAdapter<N> for ndarray::ArrayBase<A, ndarray::Ix2>
+impl<A, N> ArrayAdapter<N> for ndarray::ArrayBase<A, ndarray::Ix2>
 where
-	A: ndarray::Data<Elem=N>,
+	A: ndarray::Data<Elem = N>,
 	N: Copy,
 {
 	#[inline]
@@ -40,7 +40,7 @@ where
 /// ```
 /// let data = kmedoids::arrayadapter::LowerTriangle { n: 4, data: vec![1, 2, 3, 4, 5, 6] };
 /// let mut meds = vec![0, 1];
-/// let (loss, numswap, numiter, assignment) = kmedoids::fasterpam(&data, &mut meds, 10);
+/// let (loss, numswap, numiter, assignment): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 10).unwrap();
 /// println!("Loss is {}", loss);
 /// ```
 #[derive(Debug, Clone)]
