@@ -29,7 +29,7 @@ If you use this code in scientific work, please cite above papers. Thank you.
 ```
 let dissim = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-let (loss, assingment, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&dissim, &mut meds, 100).unwrap();
+let (loss, assingment, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&dissim, &mut meds, 100);
 println!("Loss is: {}", loss);
 ```
 
@@ -37,7 +37,8 @@ Note that:
 
 * you need to specify the "output" data type of `loss` -- chose a signed type with sufficient precision.
 For example for unsigned distances using `u32`, it may be better to use `i64` to compute the loss.
-* the function can return an error if a conversion of the input data to the output is not possible (e.g., when converting a very large integer into a low precision integer loss).
+* the input distance type needs to be convertible into the output data type via `Into`
+
 
 ## Implemented Algorithms
 

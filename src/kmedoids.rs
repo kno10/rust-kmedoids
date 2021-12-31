@@ -25,7 +25,7 @@
 //! ```
 //! let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 //! let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-//! let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 100).unwrap();
+//! let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 100);
 //! println!("Loss is: {}", loss);
 //! ```
 pub mod arrayadapter;
@@ -33,7 +33,7 @@ pub mod arrayadapter;
 pub use crate::arrayadapter::ArrayAdapter;
 use core::ops::AddAssign;
 use num_traits::{Signed, Zero};
-use std::convert::TryFrom;
+use std::convert::From;
 
 /// Object id and distance pair
 #[derive(Debug, Copy, Clone)]
@@ -54,10 +54,10 @@ fn initial_assignment<M, N, L>(
 	mat: &M,
 	med: &[usize],
 	data: &mut Vec<Rec<N>>,
-) -> Result<L, L::Error>
+) -> L
 where
 	N: Zero + PartialOrd + Copy,
-	L: AddAssign + Zero + PartialOrd + Copy + TryFrom<N>,
+	L: AddAssign + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -89,24 +89,23 @@ where
 				cur.seco = DistancePair { i: m as u32, d: dm };
 			}
 		}
-		loss += L::try_from(cur.near.d)?;
+		loss += L::from(cur.near.d);
 		data.push(cur);
 	}
-	Ok(loss)
+	loss
 }
 
 /// Update the loss when removing each medoid
-fn update_removal_loss<N, L>(data: &[Rec<N>], loss: &mut Vec<L>) -> Result<(), L::Error>
+fn update_removal_loss<N, L>(data: &[Rec<N>], loss: &mut Vec<L>)
 where
 	N: Zero + Copy,
-	L: AddAssign + Signed + Copy + Zero + TryFrom<N>,
+	L: AddAssign + Signed + Copy + Zero + From<N>,
 {
 	loss.fill(L::zero()); // stable since 1.50
 	for rec in data.iter() {
-		loss[rec.near.i as usize] += L::try_from(rec.seco.d)? - L::try_from(rec.near.d)?;
+		loss[rec.near.i as usize] += L::from(rec.seco.d) - L::from(rec.near.d);
 		// as N might be unsigned
 	}
-	Ok(())
 }
 
 /// Find the minimum (both index and value)
@@ -162,10 +161,10 @@ fn find_best_swap<M, N, L>(
 	removal_loss: &[L],
 	data: &[Rec<N>],
 	j: usize,
-) -> Result<(L, usize), L::Error>
+) -> (L, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let mut ploss = removal_loss.to_vec();
@@ -175,16 +174,16 @@ where
 		let djo = mat.get(j, o);
 		// New medoid is closest:
 		if djo < reco.near.d {
-			acc += L::try_from(djo)? - L::try_from(reco.near.d)?;
+			acc += L::from(djo) - L::from(reco.near.d);
 			// loss already includes ds - dn, remove
-			ploss[reco.near.i as usize] += L::try_from(reco.near.d)? - L::try_from(reco.seco.d)?;
+			ploss[reco.near.i as usize] += L::from(reco.near.d) - L::from(reco.seco.d);
 		} else if djo < reco.seco.d {
 			// loss already includes ds - dn, adjust to d(xo) - dn
-			ploss[reco.near.i as usize] += L::try_from(djo)? - L::try_from(reco.seco.d)?;
+			ploss[reco.near.i as usize] += L::from(djo) - L::from(reco.seco.d);
 		}
 	}
 	let (b, bloss) = find_min(&ploss);
-	Ok((bloss + acc, b)) // add the shared accumulator
+	(bloss + acc, b) // add the shared accumulator
 }
 
 /// Find the best swap for object j - slower PAM version
@@ -194,16 +193,16 @@ fn find_best_swap_pam<M, N, L>(
 	med: &[usize],
 	data: &[Rec<N>],
 	j: usize,
-) -> Result<(L, usize), L::Error>
+) -> (L, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let recj = &data[j];
 	let mut best = (L::zero(), usize::MAX);
 	for (m, _) in med.iter().enumerate() {
-		let mut acc: L = -L::try_from(recj.near.d)?; // j becomes medoid
+		let mut acc: L = -L::from(recj.near.d); // j becomes medoid
 		for (o, reco) in data.iter().enumerate() {
 			if o == j {
 				continue;
@@ -213,21 +212,21 @@ where
 			if reco.near.i as usize == m {
 				if djo < reco.seco.d {
 					// Assign to new medoid:
-					acc += L::try_from(djo)? - L::try_from(reco.near.d)?;
+					acc += L::from(djo) - L::from(reco.near.d)
 				} else {
 					// Assign to second nearest instead:
-					acc += L::try_from(reco.seco.d)? - L::try_from(reco.near.d)?;
+					acc += L::from(reco.seco.d) - L::from(reco.near.d)
 				}
 			} else if djo < reco.near.d {
 				// new mediod is closer:
-				acc += L::try_from(djo)? - L::try_from(reco.near.d)?;
+				acc += L::from(djo) - L::from(reco.near.d)
 			} // else no change
 		}
 		if acc < best.0 {
 			best = (acc, m);
 		}
 	}
-	Ok(best)
+	best
 }
 
 /// Debug helper function
@@ -261,10 +260,10 @@ fn do_swap<M, N, L>(
 	data: &mut Vec<Rec<N>>,
 	b: usize,
 	j: usize,
-) -> Result<L, L::Error>
+) -> L
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -313,11 +312,11 @@ where
 				};
 			}
 		}
-		newloss += L::try_from(reco.near.d)?;
+		newloss += L::from(reco.near.d);
 	}
 	#[cfg(feature = "assertions")]
 	debug_validate_assignment(mat, med, &data);
-	Ok(newloss)
+	newloss
 }
 
 /// Random initialization (requires the `rand` crate)
@@ -368,34 +367,34 @@ pub fn random_initialization(n: usize, k: usize, mut rng: &mut impl rand::Rng) -
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 /// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 100).unwrap();
+/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 100);
 /// println!("Loss is: {}", loss);
 /// ```
 pub fn fasterpam<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
 	maxiter: usize,
-) -> Result<(L, Vec<usize>, usize, usize), L::Error>
+) -> (L, Vec<usize>, usize, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
 	let k = med.len();
 	if k == 1 {
 		let assi = vec![0; n];
-		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0)?;
-		return Ok((loss, assi, 1, if swapped { 1 } else { 0 }));
+		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
+		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
 	let mut data = Vec::<Rec<N>>::with_capacity(n);
-	let mut loss = initial_assignment(mat, med, &mut data)?;
+	let mut loss = initial_assignment(mat, med, &mut data);
 	#[cfg(feature = "assertions")]
 	debug_validate_assignment(mat, med, &data);
 
 	// println!("Initial loss is {}", loss);
 	let mut removal_loss = vec![L::zero(); k];
-	update_removal_loss(&data, &mut removal_loss)?;
+	update_removal_loss(&data, &mut removal_loss);
 	let mut lastswap = n;
 	let mut n_swaps = 0;
 	let mut iter = 0;
@@ -410,20 +409,20 @@ where
 			if j == data[j].near.i as usize {
 				continue; // This already is a medoid
 			}
-			let (change, b) = find_best_swap(mat, &removal_loss, &data, j)?;
+			let (change, b) = find_best_swap(mat, &removal_loss, &data, j);
 			if change >= L::zero() {
 				continue; // No improvement
 			}
 			n_swaps += 1;
 			lastswap = j;
 			// perform the swap
-			let newloss = do_swap(mat, med, &mut data, b, j)?;
+			let newloss = do_swap(mat, med, &mut data, b, j);
 			// println!("{} + {} = {} vs. {}", loss, change, loss + change, newloss);
 			if newloss >= loss {
 				break; // Probably numerically unstable now.
 			}
 			loss = newloss;
-			update_removal_loss(&data, &mut removal_loss)?;
+			update_removal_loss(&data, &mut removal_loss);
 		}
 		if n_swaps == swaps_before {
 			break; // converged
@@ -432,7 +431,7 @@ where
 	// println!("final loss: {}", loss);
 	// println!("number of swaps: {}", n_swaps);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
-	Ok((loss, assi, iter, n_swaps))
+	(loss, assi, iter, n_swaps)
 }
 
 /// Run the FastPAM1 algorithm, which yields the same results as the original PAM.
@@ -466,28 +465,28 @@ where
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 /// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::fastpam1(&data, &mut meds, 100).unwrap();
+/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::fastpam1(&data, &mut meds, 100);
 /// println!("Loss is: {}", loss);
 /// ```
 pub fn fastpam1<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
 	maxiter: usize,
-) -> Result<(L, Vec<usize>, usize, usize), L::Error>
+) -> (L, Vec<usize>, usize, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
 	let k = med.len();
 	if k == 1 {
 		let assi = vec![0; n];
-		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0)?;
-		return Ok((loss, assi, 1, if swapped { 1 } else { 0 }));
+		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
+		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
 	let mut data = Vec::<Rec<N>>::with_capacity(n);
-	let mut loss = initial_assignment(mat, med, &mut data)?;
+	let mut loss = initial_assignment(mat, med, &mut data);
 	#[cfg(feature = "assertions")]
 	debug_validate_assignment(mat, med, &data);
 	// println!("Initial loss is {}", loss);
@@ -498,12 +497,12 @@ where
 		iter += 1;
 		// println!("Iteration {} before {}", iter, loss);
 		let mut best = (L::zero(), usize::MAX, usize::MAX);
-		update_removal_loss(&data, &mut removal_loss)?;
+		update_removal_loss(&data, &mut removal_loss);
 		for j in 0..n {
 			if j == data[j].near.i as usize {
 				continue; // This already is a medoid
 			}
-			let (change, b) = find_best_swap(mat, &removal_loss, &data, j)?;
+			let (change, b) = find_best_swap(mat, &removal_loss, &data, j);
 			if change >= best.0 {
 				continue; // No improvement
 			}
@@ -512,7 +511,7 @@ where
 		if best.0 < L::zero() {
 			n_swaps += 1;
 			// perform the swap
-			let newloss = do_swap(mat, med, &mut data, best.1, best.2)?;
+			let newloss = do_swap(mat, med, &mut data, best.1, best.2);
 			// println!("{} + {} = {} vs. {}", loss, best.0, loss + best.0, newloss);
 			if newloss >= loss {
 				break; // Probably numerically unstable now.
@@ -525,7 +524,7 @@ where
 	// println!("final loss: {}", loss);
 	// println!("number of swaps: {}", n_swaps);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
-	Ok((loss, assi, iter, n_swaps))
+	(loss, assi, iter, n_swaps)
 }
 
 /// Main optimization function of PAM, not exposed (use pam_swap or pam)
@@ -535,18 +534,18 @@ fn pam_optimize<M, N, L>(
 	data: &mut Vec<Rec<N>>,
 	maxiter: usize,
 	mut loss: L,
-) -> Result<(L, Vec<usize>, usize, usize), L::Error>
+) -> (L, Vec<usize>, usize, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
 	let k = med.len();
 	if k == 1 {
 		let assi = vec![0; n];
-		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0)?;
-		return Ok((loss, assi, 1, if swapped { 1 } else { 0 }));
+		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
+		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
 	#[cfg(feature = "assertions")]
 	debug_validate_assignment(mat, med, &data);
@@ -561,7 +560,7 @@ where
 			if j == data[j].near.i as usize {
 				continue; // This already is a medoid
 			}
-			let (change, b) = find_best_swap_pam(mat, med, data, j)?;
+			let (change, b) = find_best_swap_pam(mat, med, data, j);
 			if change >= best.0 {
 				continue; // No improvement
 			}
@@ -570,7 +569,7 @@ where
 		if best.0 < L::zero() {
 			n_swaps += 1;
 			// perform the swap
-			let newloss = do_swap(mat, med, data, best.1, best.2)?;
+			let newloss = do_swap(mat, med, data, best.1, best.2);
 			// println!("{} + {} = {} vs. {}", loss, best.0, loss + best.0, newloss);
 			if newloss >= loss {
 				break; // Probably numerically unstable now.
@@ -583,7 +582,7 @@ where
 	// println!("final loss: {}", loss);
 	// println!("number of swaps: {}", n_swaps);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
-	Ok((loss, assi, iter, n_swaps))
+	(loss, assi, iter, n_swaps)
 }
 /// Not exposed. Use pam_build or pam.
 fn pam_build_initialize<M, N, L>(
@@ -591,10 +590,10 @@ fn pam_build_initialize<M, N, L>(
 	meds: &mut Vec<usize>,
 	data: &mut Vec<Rec<N>>,
 	k: usize,
-) -> Result<L, L::Error>
+) -> L
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -604,7 +603,7 @@ where
 		let mut sum = L::zero();
 		for j in 0..n {
 			if j != i {
-				sum += L::try_from(mat.get(i, j))?;
+				sum += L::from(mat.get(i, j));
 			}
 		}
 		if i == 0 || sum < best.0 {
@@ -634,7 +633,7 @@ where
 				if j != i {
 					let d = mat.get(i, j);
 					if d < dj.near.d {
-						sum += L::try_from(d)? - L::try_from(dj.near.d)?;
+						sum += L::from(d) - L::from(dj.near.d)
 					}
 				}
 			}
@@ -661,11 +660,11 @@ where
 			} else if recj.seco.i == u32::MAX || dj < recj.seco.d {
 				recj.seco = DistancePair { i: l as u32, d: dj };
 			}
-			loss += L::try_from(recj.near.d)?;
+			loss += L::from(recj.near.d);
 		}
 		meds.push(best.1);
 	}
-	Ok(loss)
+	loss
 }
 
 /// Implementation of the original PAM SWAP algorithm (no BUILD).
@@ -697,21 +696,21 @@ where
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 /// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::pam_swap(&data, &mut meds, 100).unwrap();
+/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::pam_swap(&data, &mut meds, 100);
 /// println!("Loss is: {}", loss);
 /// ```
 pub fn pam_swap<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
 	maxiter: usize,
-) -> Result<(L, Vec<usize>, usize, usize), L::Error>
+) -> (L, Vec<usize>, usize, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let mut data = Vec::<Rec<N>>::with_capacity(mat.len());
-	let loss = initial_assignment(mat, med, &mut data)?;
+	let loss = initial_assignment(mat, med, &mut data);
 	pam_optimize(mat, med, &mut data, maxiter, loss)
 }
 
@@ -740,13 +739,13 @@ where
 /// Given a dissimilarity matrix of size 4 x 4, use:
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
-/// let (loss, assi, meds): (f64, _, _) = kmedoids::pam_build(&data, 2).unwrap();
+/// let (loss, assi, meds): (f64, _, _) = kmedoids::pam_build(&data, 2);
 /// println!("Loss is: {}", loss);
 /// ```
-pub fn pam_build<M, N, L>(mat: &M, k: usize) -> Result<(L, Vec<usize>, Vec<usize>), L::Error>
+pub fn pam_build<M, N, L>(mat: &M, k: usize) -> (L, Vec<usize>, Vec<usize>)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -756,9 +755,9 @@ where
 	assert!(k <= n, "k must be at most N");
 	let mut meds = Vec::<usize>::with_capacity(k);
 	let mut data = Vec::<Rec<N>>::with_capacity(n);
-	let loss = pam_build_initialize(mat, &mut meds, &mut data, k)?;
+	let loss = pam_build_initialize(mat, &mut meds, &mut data, k);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
-	Ok((loss, assi, meds))
+	(loss, assi, meds)
 }
 /// Implementation of the original PAM algorithm (BUILD + SWAP)
 ///
@@ -788,17 +787,17 @@ where
 /// Given a dissimilarity matrix of size 4 x 4, use:
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
-/// let (loss, assi, meds, n_iter, n_swap): (f64, _, _, _, _) = kmedoids::pam(&data, 2, 100).unwrap();
+/// let (loss, assi, meds, n_iter, n_swap): (f64, _, _, _, _) = kmedoids::pam(&data, 2, 100);
 /// println!("Loss is: {}", loss);
 /// ```
 pub fn pam<M, N, L>(
 	mat: &M,
 	k: usize,
 	maxiter: usize,
-) -> Result<(L, Vec<usize>, Vec<usize>, usize, usize), L::Error>
+) -> (L, Vec<usize>, Vec<usize>, usize, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -808,17 +807,17 @@ where
 	assert!(k <= n, "k must be at most N");
 	let mut meds = Vec::<usize>::with_capacity(k);
 	let mut data = Vec::<Rec<N>>::with_capacity(n);
-	let loss = pam_build_initialize(mat, &mut meds, &mut data, k)?;
-	let (nloss, assi, n_iter, n_swap) = pam_optimize(mat, &mut meds, &mut data, maxiter, loss)?;
-	Ok((nloss, assi, meds, n_iter, n_swap)) // also return medoids
+	let loss = pam_build_initialize(mat, &mut meds, &mut data, k);
+	let (nloss, assi, n_iter, n_swap) = pam_optimize(mat, &mut meds, &mut data, maxiter, loss);
+	(nloss, assi, meds, n_iter, n_swap) // also return medoids
 }
 
 /// Assign each to the nearest medoid, return loss
 #[inline]
-fn assign_nearest<M, N, L>(mat: &M, med: &[usize], data: &mut Vec<usize>) -> Result<L, L::Error>
+fn assign_nearest<M, N, L>(mat: &M, med: &[usize], data: &mut Vec<usize>) -> L
 where
 	N: PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -837,7 +836,7 @@ where
 				best = (m, dm);
 			}
 		}
-		loss += L::try_from(best.1)?;
+		loss += L::from(best.1);
 		assert!(data.len() >= i);
 		if data.len() == i {
 			data.push(best.0);
@@ -845,7 +844,7 @@ where
 			data[i] = best.0;
 		}
 	}
-	Ok(loss)
+	loss
 }
 
 // Choose the best medoid within a partition
@@ -854,10 +853,10 @@ pub fn choose_medoid_within_partition<M, N, L>(
 	assi: &[usize],
 	med: &mut [usize],
 	m: usize,
-) -> Result<(bool, L), L::Error>
+) -> (bool, L)
 where
 	N: PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let first = med[m];
@@ -865,7 +864,7 @@ where
 	let mut sumb = L::zero();
 	for (i, &a) in assi.iter().enumerate() {
 		if first != i && a == m {
-			sumb += L::try_from(mat.get(first, i))?;
+			sumb += L::from(mat.get(first, i));
 		}
 	}
 	for (j, &aj) in assi.iter().enumerate() {
@@ -873,7 +872,7 @@ where
 			let mut sumj = L::zero();
 			for (i, &ai) in assi.iter().enumerate() {
 				if i != j && ai == m {
-					sumj += L::try_from(mat.get(j, i))?;
+					sumj += L::from(mat.get(j, i));
 				}
 			}
 			if sumj < sumb {
@@ -883,7 +882,7 @@ where
 		}
 	}
 	med[m] = best;
-	Ok((best != first, sumb))
+	(best != first, sumb)
 }
 
 /// Run the Alternating algorithm, a k-means-style alternate optimization.
@@ -916,34 +915,34 @@ where
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 /// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-/// let (loss, assi, n_iter): (f64, _, _) = kmedoids::alternating(&data, &mut meds, 100).unwrap();
+/// let (loss, assi, n_iter): (f64, _, _) = kmedoids::alternating(&data, &mut meds, 100);
 /// println!("Loss is: {}", loss);
 /// ```
 pub fn alternating<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
 	maxiter: usize,
-) -> Result<(L, Vec<usize>, usize), L::Error>
+) -> (L, Vec<usize>, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
 	let mut assi = Vec::<usize>::with_capacity(mat.len());
-	let mut loss: L = assign_nearest(mat, med, &mut assi)?;
+	let mut loss: L = assign_nearest(mat, med, &mut assi);
 	let mut iter = 0;
 	while iter < maxiter {
 		iter += 1;
 		let mut changed = false;
 		for i in 0..med.len() {
-			changed |= choose_medoid_within_partition::<M, N, L>(mat, &assi, med, i)?.0;
+			changed |= choose_medoid_within_partition::<M, N, L>(mat, &assi, med, i).0;
 		}
 		if !changed {
 			break;
 		}
-		loss = assign_nearest(mat, med, &mut assi)?;
+		loss = assign_nearest(mat, med, &mut assi);
 	}
-	Ok((loss, assi, iter))
+	(loss, assi, iter)
 }
 
 /// Compute the Silhouette of a strict partitional clustering.
@@ -975,13 +974,13 @@ where
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 /// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-/// let (loss, assi, n_iter): (f64, _, _) = kmedoids::alternating(&data, &mut meds, 100).unwrap();
-/// let (sil, _): (f64, _) = kmedoids::silhouette(&data, &assi).unwrap();
+/// let (loss, assi, n_iter): (f64, _, _) = kmedoids::alternating(&data, &mut meds, 100);
+/// let (sil, _): (f64, _) = kmedoids::silhouette(&data, &assi);
 /// println!("Silhouette is: {}", sil);
 /// ```
-pub fn silhouette<M, N>(mat: &M, assi: &[usize]) -> Result<(f64, Vec<f64>), N::Error>
+pub fn silhouette<M, N>(mat: &M, assi: &[usize]) -> (f64, Vec<f64>)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display + TryInto<f64>,
+	N: Zero + PartialOrd + Copy + std::fmt::Display + Into<f64>,
 	M: ArrayAdapter<N>,
 {
 	fn checked_div(x: f64, y: f64) -> f64 {
@@ -1002,11 +1001,11 @@ where
 			}
 			if i != j {
 				buf[aj].0 += 1;
-				buf[aj].1 += mat.get(i, j).try_into()?;
+				buf[aj].1 += mat.get(i, j).into();
 			}
 		}
 		if buf.len() == 1 {
-			return Ok((0., sil));
+			return (0., sil);
 		}
 		let a = checked_div(buf[ai].1, buf[ai].0 as f64);
 		let b = buf
@@ -1020,7 +1019,7 @@ where
 		lsum += s;
 	}
 	println!("Total: {}", lsum / (assi.len() as f64));
-	Ok((lsum / (assi.len() as f64), sil))
+	(lsum / (assi.len() as f64), sil)
 }
 
 #[cfg(test)]
@@ -1030,7 +1029,6 @@ mod tests {
 		alternating, arrayadapter::LowerTriangle, fasterpam, fastpam1, pam, pam_build, pam_swap,
 		silhouette,
 	};
-	use std::error;
 	fn assert_array(result: Vec<usize>, expect: Vec<usize>, msg: &'static str) {
 		assert!(
 			result.iter().zip(expect.iter()).all(|(a, b)| a == b),
@@ -1040,100 +1038,95 @@ mod tests {
 	}
 
 	#[test]
-	fn testfasterpam_simple() -> Result<(), Box<dyn error::Error>> {
+	fn testfasterpam_simple() {
 		let data = LowerTriangle {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let mut meds = vec![0, 1];
-		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam(&data, &mut meds, 10)?;
-		let (sil, _) = silhouette(&data, &assi)?;
+		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam(&data, &mut meds, 10);
+		let (sil, _) = silhouette(&data, &assi);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 2, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
 		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
-		Ok(())
 	}
 
 	#[test]
-	fn testfasterpam_single_cluster() -> Result<(), Box<dyn error::Error>> {
+	fn testfasterpam_single_cluster() {
 		let data = LowerTriangle {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let mut meds = vec![1]; // So we need one swap
-		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam(&data, &mut meds, 10)?;
-		let (sil, _) = silhouette(&data, &assi)?;
+		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam(&data, &mut meds, 10);
+		let (sil, _) = silhouette(&data, &assi);
 		assert_eq!(loss, 14, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 1, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 0, 0], "assignment not as expected");
 		assert_array(meds, vec![0], "medoids not as expected");
 		assert_eq!(sil, 0., "Silhouette not as expected");
-		Ok(())
 	}
 
 	#[test]
-	fn testfastpam_simple() -> Result<(), Box<dyn error::Error>> {
+	fn testfastpam_simple() {
 		let data = LowerTriangle {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let mut meds = vec![0, 1];
-		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fastpam1(&data, &mut meds, 10)?;
-		let (sil, _) = silhouette(&data, &assi)?;
+		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fastpam1(&data, &mut meds, 10);
+		let (sil, _) = silhouette(&data, &assi);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
 		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
-		Ok(())
 	}
 
 	#[test]
-	fn testpam_swap_simple() -> Result<(), Box<dyn error::Error>> {
+	fn testpam_swap_simple() {
 		let data = LowerTriangle {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let mut meds = vec![0, 1];
-		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = pam_swap(&data, &mut meds, 10)?;
-		let (sil, _) = silhouette(&data, &assi)?;
+		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = pam_swap(&data, &mut meds, 10);
+		let (sil, _) = silhouette(&data, &assi);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
 		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
-		Ok(())
 	}
 
 	#[test]
-	fn testpam_build_simple() -> Result<(), Box<dyn error::Error>> {
+	fn testpam_build_simple() {
 		let data = LowerTriangle {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
-		let (loss, assi, meds): (i64, _, _) = pam_build(&data, 2)?;
-		let (sil, _) = silhouette(&data, &assi)?;
+		let (loss, assi, meds): (i64, _, _) = pam_build(&data, 2);
+		let (sil, _) = silhouette(&data, &assi);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
 		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
-		Ok(())
 	}
 
 	#[test]
-	fn testpam_simple() -> Result<(), Box<dyn error::Error>> {
+	fn testpam_simple() {
 		let data = LowerTriangle {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
-		let (loss, assi, meds, n_iter, n_swap): (i64, _, _, _, _) = pam(&data, 2, 10)?;
-		let (sil, _) = silhouette(&data, &assi)?;
+		let (loss, assi, meds, n_iter, n_swap): (i64, _, _, _, _) = pam(&data, 2, 10);
+		let (sil, _) = silhouette(&data, &assi);
 		// no swaps, because BUILD does a decent job
 		assert_eq!(n_swap, 0, "swaps not as expected");
 		assert_eq!(n_iter, 1, "iterations not as expected");
@@ -1141,23 +1134,21 @@ mod tests {
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
 		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
-		Ok(())
 	}
 
 	#[test]
-	fn testalternating() -> Result<(), Box<dyn error::Error>> {
+	fn testalternating() {
 		let data = LowerTriangle {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let mut meds = vec![0, 1];
-		let (loss, assi, n_iter): (i64, _, _) = alternating(&data, &mut meds, 10)?;
-		let (sil, _) = silhouette(&data, &assi)?;
+		let (loss, assi, n_iter): (i64, _, _) = alternating(&data, &mut meds, 10);
+		let (sil, _) = silhouette(&data, &assi);
 		assert_eq!(n_iter, 3, "iterations not as expected");
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_array(assi, vec![1, 1, 1, 0, 0], "assignment not as expected");
 		assert_array(meds, vec![3, 0], "medoids not as expected");
 		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
-		Ok(())
 	}
 }

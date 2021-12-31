@@ -40,7 +40,7 @@ where
 /// ```
 /// let data = kmedoids::arrayadapter::LowerTriangle { n: 4, data: vec![1, 2, 3, 4, 5, 6] };
 /// let mut meds = vec![0, 1];
-/// let (loss, numswap, numiter, assignment): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 10).unwrap();
+/// let (loss, numswap, numiter, assignment): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 10);
 /// println!("Loss is {}", loss);
 /// ```
 #[derive(Debug, Clone)]

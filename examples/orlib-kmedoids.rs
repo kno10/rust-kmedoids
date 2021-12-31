@@ -86,7 +86,7 @@ fn main() -> Result<(), Box<dyn Error>>{
 	let mut rand = rand::thread_rng();
 	let start = Instant::now();
 	let mut meds = random_initialization(prob.data.shape()[0], prob.k, &mut rand);
-	let (loss, _, iter, swaps) : (i64, _, _, _) = fasterpam(&prob.data, &mut meds, 100)?;
+	let (loss, _, iter, swaps) : (i64, _, _, _) = fasterpam(&prob.data, &mut meds, 100);
 	let duration = start.elapsed();
 	println!("FasterPAM final loss: {}", loss);
 	println!("FasterPAM swaps performed: {}", swaps);

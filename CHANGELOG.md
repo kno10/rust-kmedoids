@@ -1,14 +1,13 @@
 # Changelog
 
-## kmedoids 0.2.0 (2021-12-28)
+## kmedoids 0.2.0 (2021-12-31)
 
 - API change: allow input and loss types to differ
   (e.g., u32 input, i64 loss -- loss must be signed)
 - removed safe_add trait -- use a higher precision loss type instead
 - requires specifying the loss data type
-- because this relies on TryInto, use a Result
-- do not fail for k=1, but return the expected result
-- added Silhouette index for evaluation
+- fix: do not fail for k=1, but return the expected result
+- add: added Silhouette index for evaluation
 
 ## kmedoids 0.1.6 (2021-09-02)
 
