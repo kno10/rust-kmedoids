@@ -1,4 +1,3 @@
-#![allow(clippy::needless_range_loop)]
 //! k-Medoids Clustering with the FasterPAM Algorithm
 //!
 //! For details on the implemented FasterPAM algorithm, please see:
@@ -81,9 +80,9 @@ where
 				d: N::zero(),
 			},
 		};
-		for m in 1..k {
-			let dm = mat.get(i, med[m]);
-			if dm < cur.near.d || i == med[m] {
+		for (m, &me) in med.iter().enumerate().skip(1) {
+			let dm = mat.get(i, me);
+			if dm < cur.near.d || i == me {
 				cur.seco = cur.near;
 				cur.near = DistancePair { i: m as u32, d: dm };
 			} else if cur.seco.i == u32::MAX || dm < cur.seco.d {
@@ -102,10 +101,8 @@ where
 	N: Zero + Copy,
 	L: AddAssign + Signed + Copy + Zero + TryFrom<N>,
 {
-	let n = data.len();
 	loss.fill(L::zero()); // stable since 1.50
-	for i in 0..n {
-		let rec = &data[i];
+	for rec in data.iter() {
 		loss[rec.near.i as usize] += L::try_from(rec.seco.d)? - L::try_from(rec.near.d)?;
 		// as N might be unsigned
 	}
@@ -118,15 +115,13 @@ fn find_min<L>(a: &[L]) -> (usize, L)
 where
 	L: PartialOrd + Copy + Zero,
 {
-	let mut rk: usize = a.len();
-	let mut rv: L = L::zero();
-	for (ik, iv) in a.iter().enumerate() {
-		if ik == 0 || *iv < rv {
-			rk = ik;
-			rv = *iv;
+	let mut best: (usize, L) = (a.len(), L::zero());
+	for (ik, &iv) in a.iter().enumerate() {
+		if ik == 0 || iv < best.1 {
+			best = (ik, iv);
 		}
 	}
-	(rk, rv)
+	best
 }
 
 /// Update the second nearest medoid information
@@ -149,11 +144,11 @@ where
 		i: b as u32,
 		d: djo,
 	};
-	for i in 0..med.len() {
+	for (i, &mi) in med.iter().enumerate() {
 		if i == n || i == b {
 			continue;
 		}
-		let dm = mat.get(o, med[i]);
+		let dm = mat.get(o, mi);
 		if dm < s.d {
 			s = DistancePair { i: i as u32, d: dm };
 		}
@@ -173,12 +168,10 @@ where
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
-	let n = mat.len();
 	let mut ploss = removal_loss.to_vec();
 	// Improvement from the journal version:
 	let mut acc = L::zero();
-	for o in 0..n {
-		let reco = &data[o];
+	for (o, reco) in data.iter().enumerate() {
 		let djo = mat.get(j, o);
 		// New medoid is closest:
 		if djo < reco.near.d {
@@ -207,17 +200,14 @@ where
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
-	let n = mat.len();
-	let k = med.len();
 	let recj = &data[j];
 	let mut best = (L::zero(), usize::MAX);
-	for m in 0..k {
+	for (m, _) in med.iter().enumerate() {
 		let mut acc: L = -L::try_from(recj.near.d)?; // j becomes medoid
-		for o in 0..n {
+		for (o, reco) in data.iter().enumerate() {
 			if o == j {
 				continue;
 			}
-			let reco = &data[o];
 			let djo = mat.get(j, o);
 			// Current medoid is being replaced:
 			if reco.near.i as usize == m {
@@ -247,8 +237,7 @@ where
 	N: PartialOrd + Copy,
 	M: ArrayAdapter<N>,
 {
-	let n = mat.len();
-	for o in 0..n {
+	for o in 0..mat.len() {
 		debug_assert!(
 			mat.get(o, med[data[o].near.i as usize]) == data[o].near.d,
 			"primary assignment inconsistent"
@@ -283,8 +272,7 @@ where
 	assert!(j < n, "invalid object number");
 	med[b] = j;
 	let mut newloss = L::zero();
-	for o in 0..n {
-		let mut reco = &mut data[o];
+	for (o, reco) in data.iter_mut().enumerate() {
 		if o == j {
 			if reco.near.i != b as u32 {
 				reco.seco = reco.near;
@@ -340,7 +328,7 @@ where
 /// * `k` - number of clusters to find
 /// * `rng` - random number generator
 ///
-/// returns a vector of medoid indexes in 0..n
+/// returns a vector of medoid indexes in 0..n-1
 ///
 /// ## Example
 ///
@@ -640,13 +628,13 @@ where
 	// choose remaining medoids
 	for l in 1..k {
 		best = (L::zero(), k);
-		for i in 1..n {
+		for (i, _) in data.iter().enumerate().skip(1) {
 			let mut sum = L::zero();
-			for j in 0..n {
+			for (j, dj) in data.iter().enumerate() {
 				if j != i {
 					let d = mat.get(i, j);
-					if d < data[j].near.d {
-						sum += L::try_from(d)? - L::try_from(data[j].near.d)?;
+					if d < dj.near.d {
+						sum += L::try_from(d)? - L::try_from(dj.near.d)?;
 					}
 				}
 			}
@@ -657,8 +645,7 @@ where
 		assert!(best.0 <= L::zero());
 		// Update assignments:
 		loss = L::zero();
-		for j in 0..n {
-			let mut recj = &mut data[j];
+		for (j, recj) in data.iter_mut().enumerate() {
 			if j == best.1 {
 				recj.seco = recj.near;
 				recj.near = DistancePair {
@@ -843,21 +830,19 @@ where
 	let firstcenter = med[0];
 	let mut loss: L = L::zero();
 	for i in 0..n {
-		let mut cur = 0;
-		let mut best = mat.get(i, firstcenter);
-		for m in 1..k {
-			let dm = mat.get(i, med[m]);
-			if dm < best || i == med[m] {
-				cur = m;
-				best = dm;
+		let mut best = (0, mat.get(i, firstcenter));
+		for (m, &mm) in med.iter().enumerate().skip(1) {
+			let dm = mat.get(i, mm);
+			if dm < best.1 || i == mm {
+				best = (m, dm);
 			}
 		}
-		loss += L::try_from(best)?;
+		loss += L::try_from(best.1)?;
 		assert!(data.len() >= i);
 		if data.len() == i {
-			data.push(cur);
+			data.push(best.0);
 		} else {
-			data[i] = cur;
+			data[i] = best.0;
 		}
 	}
 	Ok(loss)
@@ -878,16 +863,16 @@ where
 	let first = med[m];
 	let mut best = first;
 	let mut sumb = L::zero();
-	for (i, a) in assi.iter().enumerate() {
-		if first != i && *a == m {
+	for (i, &a) in assi.iter().enumerate() {
+		if first != i && a == m {
 			sumb += L::try_from(mat.get(first, i))?;
 		}
 	}
-	for (j, aj) in assi.iter().enumerate() {
-		if j != first && *aj == m {
+	for (j, &aj) in assi.iter().enumerate() {
+		if j != first && aj == m {
 			let mut sumj = L::zero();
-			for (i, ai) in assi.iter().enumerate() {
-				if i != j && *ai == m {
+			for (i, &ai) in assi.iter().enumerate() {
+				if i != j && ai == m {
 					sumj += L::try_from(mat.get(j, i))?;
 				}
 			}
@@ -944,15 +929,13 @@ where
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + TryFrom<N> + std::fmt::Display,
 	M: ArrayAdapter<N>,
 {
-	let n = mat.len();
-	let k = med.len();
-	let mut assi = Vec::<usize>::with_capacity(n);
+	let mut assi = Vec::<usize>::with_capacity(mat.len());
 	let mut loss: L = assign_nearest(mat, med, &mut assi)?;
 	let mut iter = 0;
 	while iter < maxiter {
 		iter += 1;
 		let mut changed = false;
-		for i in 0..k {
+		for i in 0..med.len() {
 			changed |= choose_medoid_within_partition::<M, N, L>(mat, &assi, med, i)?.0;
 		}
 		if !changed {
