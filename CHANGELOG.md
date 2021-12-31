@@ -8,6 +8,7 @@
 - requires specifying the loss data type
 - because this relies on TryInto, use a Result
 - do not fail for k=1, but return the expected result
+- added Silhouette index for evaluation
 
 ## kmedoids 0.1.6 (2021-09-02)
 

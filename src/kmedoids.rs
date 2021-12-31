@@ -946,12 +946,89 @@ where
 	Ok((loss, assi, iter))
 }
 
+/// Compute the Silhouette of a strict partitional clustering.
+///
+/// The Silhouette, proposed by Peter Rousseeuw in 1987, is a popular internal
+/// evaluation measure for clusterings. Although it is defined on arbitary metrics,
+/// it is most appropriate for evaluating "spherical" clusters, as it expects objects
+/// to be closer to all members of its own cluster than to members of other clusters.
+///
+/// Because of the additional requirement of a division operator, this implementation
+/// currently always returns a f64 result, and accepts only input distances that can be
+/// converted into f64.
+///
+/// * type `M` - matrix data type such as `ndarray::Array2` or `kmedoids::arrayadapter::LowerTriangle`
+/// * type `N` - number data type such as `u32` or `f64`
+/// * `mat` - a pairwise distance matrix
+/// * `assi` - the cluster assignment
+///
+/// returns a tuple containing:
+/// * the average silhouette
+/// * the individual silhouette values
+///
+/// ## Panics
+///
+/// * panics when the dissimilarity matrix is not square
+///
+/// ## Example
+/// Given a dissimilarity matrix of size 4 x 4, use:
+/// ```
+/// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
+/// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+/// let (loss, assi, n_iter): (f64, _, _) = kmedoids::alternating(&data, &mut meds, 100).unwrap();
+/// let (sil, _): (f64, _) = kmedoids::silhouette(&data, &assi).unwrap();
+/// println!("Silhouette is: {}", sil);
+/// ```
+pub fn silhouette<M, N>(mat: &M, assi: &[usize]) -> Result<(f64, Vec<f64>), N::Error>
+where
+	N: Zero + PartialOrd + Copy + std::fmt::Display + TryInto<f64>,
+	M: ArrayAdapter<N>,
+{
+	fn checked_div(x: f64, y: f64) -> f64 {
+		if y > 0. {
+			x / y
+		} else {
+			0.
+		}
+	}
+	let mut sil = vec![0.; assi.len()];
+	let mut lsum: f64 = 0.;
+	let mut buf = Vec::<(usize, f64)>::new();
+	for (i, &ai) in assi.iter().enumerate() {
+		buf.clear();
+		for (j, &aj) in assi.iter().enumerate() {
+			while aj >= buf.len() {
+				buf.push((0, 0.));
+			}
+			if i != j {
+				buf[aj].0 += 1;
+				buf[aj].1 += mat.get(i, j).try_into()?;
+			}
+		}
+		if buf.len() == 1 {
+			return Ok((0., sil));
+		}
+		let a = checked_div(buf[ai].1, buf[ai].0 as f64);
+		let b = buf
+			.iter()
+			.enumerate()
+			.filter(|&(i, _)| i != ai)
+			.map(|(_, p)| checked_div(p.1, p.0 as f64))
+			.fold(f64::INFINITY, f64::min);
+		let s = checked_div(b - a, f64::max(a, b));
+		sil.push(s);
+		lsum += s;
+	}
+	println!("Total: {}", lsum / (assi.len() as f64));
+	Ok((lsum / (assi.len() as f64), sil))
+}
+
 #[cfg(test)]
 mod tests {
 	// TODO: use a larger, much more interesting example.
-
 	use crate::{
 		alternating, arrayadapter::LowerTriangle, fasterpam, fastpam1, pam, pam_build, pam_swap,
+		silhouette,
 	};
 	use std::error;
 	fn assert_array(result: Vec<usize>, expect: Vec<usize>, msg: &'static str) {
@@ -970,11 +1047,13 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam(&data, &mut meds, 10)?;
+		let (sil, _) = silhouette(&data, &assi)?;
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 2, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
+		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
 		Ok(())
 	}
 
@@ -986,11 +1065,13 @@ mod tests {
 		};
 		let mut meds = vec![1]; // So we need one swap
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam(&data, &mut meds, 10)?;
+		let (sil, _) = silhouette(&data, &assi)?;
 		assert_eq!(loss, 14, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 1, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 0, 0], "assignment not as expected");
 		assert_array(meds, vec![0], "medoids not as expected");
+		assert_eq!(sil, 0., "Silhouette not as expected");
 		Ok(())
 	}
 
@@ -1002,11 +1083,13 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fastpam1(&data, &mut meds, 10)?;
+		let (sil, _) = silhouette(&data, &assi)?;
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
+		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
 		Ok(())
 	}
 
@@ -1018,11 +1101,13 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = pam_swap(&data, &mut meds, 10)?;
+		let (sil, _) = silhouette(&data, &assi)?;
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
+		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
 		Ok(())
 	}
 
@@ -1033,9 +1118,11 @@ mod tests {
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let (loss, assi, meds): (i64, _, _) = pam_build(&data, 2)?;
+		let (sil, _) = silhouette(&data, &assi)?;
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
+		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
 		Ok(())
 	}
 
@@ -1046,12 +1133,14 @@ mod tests {
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let (loss, assi, meds, n_iter, n_swap): (i64, _, _, _, _) = pam(&data, 2, 10)?;
+		let (sil, _) = silhouette(&data, &assi)?;
 		// no swaps, because BUILD does a decent job
 		assert_eq!(n_swap, 0, "swaps not as expected");
 		assert_eq!(n_iter, 1, "iterations not as expected");
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
+		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
 		Ok(())
 	}
 
@@ -1063,10 +1152,12 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter): (i64, _, _) = alternating(&data, &mut meds, 10)?;
+		let (sil, _) = silhouette(&data, &assi)?;
 		assert_eq!(n_iter, 3, "iterations not as expected");
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_array(assi, vec![1, 1, 1, 0, 0], "assignment not as expected");
 		assert_array(meds, vec![3, 0], "medoids not as expected");
+		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
 		Ok(())
 	}
 }

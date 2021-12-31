@@ -45,8 +45,9 @@ For example for unsigned distances using `u32`, it may be better to use `i64` to
 * FastPAM1 (Schubert and Rousseeuw, 2019, 2021)
 * PAM (Kaufman and Rousseeuw, 1987) with BUILD and SWAP
 * Alternating optimization (k-means-style algorithm)
+* Silhouette index for evaluation (Rousseeuw, 1987)
 
-Note that the k-means-like algorithm tends to find much worse solutions.
+Note that the k-means-like algorithm for k-medoids tends to find much worse solutions.
 
 ## Rust Dependencies
 
