@@ -50,11 +50,7 @@ struct Rec<N> {
 
 /// Perform the initial assignment to medoids
 #[inline]
-fn initial_assignment<M, N, L>(
-	mat: &M,
-	med: &[usize],
-	data: &mut Vec<Rec<N>>,
-) -> L
+fn initial_assignment<M, N, L>(mat: &M, med: &[usize], data: &mut Vec<Rec<N>>) -> L
 where
 	N: Zero + PartialOrd + Copy,
 	L: AddAssign + Zero + PartialOrd + Copy + From<N>,
@@ -156,12 +152,7 @@ where
 }
 /// Find the best swap for object j - FastPAM version
 #[inline]
-fn find_best_swap<M, N, L>(
-	mat: &M,
-	removal_loss: &[L],
-	data: &[Rec<N>],
-	j: usize,
-) -> (L, usize)
+fn find_best_swap<M, N, L>(mat: &M, removal_loss: &[L], data: &[Rec<N>], j: usize) -> (L, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
@@ -188,12 +179,7 @@ where
 
 /// Find the best swap for object j - slower PAM version
 #[inline]
-fn find_best_swap_pam<M, N, L>(
-	mat: &M,
-	med: &[usize],
-	data: &[Rec<N>],
-	j: usize,
-) -> (L, usize)
+fn find_best_swap_pam<M, N, L>(mat: &M, med: &[usize], data: &[Rec<N>], j: usize) -> (L, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
@@ -254,13 +240,7 @@ where
 
 /// Perform a single swap
 #[inline]
-fn do_swap<M, N, L>(
-	mat: &M,
-	med: &mut Vec<usize>,
-	data: &mut Vec<Rec<N>>,
-	b: usize,
-	j: usize,
-) -> L
+fn do_swap<M, N, L>(mat: &M, med: &mut Vec<usize>, data: &mut Vec<Rec<N>>, b: usize, j: usize) -> L
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
@@ -790,11 +770,7 @@ where
 /// let (loss, assi, meds, n_iter, n_swap): (f64, _, _, _, _) = kmedoids::pam(&data, 2, 100);
 /// println!("Loss is: {}", loss);
 /// ```
-pub fn pam<M, N, L>(
-	mat: &M,
-	k: usize,
-	maxiter: usize,
-) -> (L, Vec<usize>, Vec<usize>, usize, usize)
+pub fn pam<M, N, L>(mat: &M, k: usize, maxiter: usize) -> (L, Vec<usize>, Vec<usize>, usize, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
@@ -918,11 +894,7 @@ where
 /// let (loss, assi, n_iter): (f64, _, _) = kmedoids::alternating(&data, &mut meds, 100);
 /// println!("Loss is: {}", loss);
 /// ```
-pub fn alternating<M, N, L>(
-	mat: &M,
-	med: &mut Vec<usize>,
-	maxiter: usize,
-) -> (L, Vec<usize>, usize)
+pub fn alternating<M, N, L>(mat: &M, med: &mut Vec<usize>, maxiter: usize) -> (L, Vec<usize>, usize)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display,
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
@@ -960,10 +932,11 @@ where
 /// * type `N` - number data type such as `u32` or `f64`
 /// * `mat` - a pairwise distance matrix
 /// * `assi` - the cluster assignment
+/// * `samples` - whether to keep the individual samples, or not
 ///
 /// returns a tuple containing:
 /// * the average silhouette
-/// * the individual silhouette values
+/// * the individual silhouette values (empty if `samples = false`)
 ///
 /// ## Panics
 ///
@@ -975,10 +948,10 @@ where
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 /// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
 /// let (loss, assi, n_iter): (f64, _, _) = kmedoids::alternating(&data, &mut meds, 100);
-/// let (sil, _): (f64, _) = kmedoids::silhouette(&data, &assi);
+/// let (sil, _): (f64, _) = kmedoids::silhouette(&data, &assi, false);
 /// println!("Silhouette is: {}", sil);
 /// ```
-pub fn silhouette<M, N>(mat: &M, assi: &[usize]) -> (f64, Vec<f64>)
+pub fn silhouette<M, N>(mat: &M, assi: &[usize], samples: bool) -> (f64, Vec<f64>)
 where
 	N: Zero + PartialOrd + Copy + std::fmt::Display + Into<f64>,
 	M: ArrayAdapter<N>,
@@ -990,7 +963,11 @@ where
 			0.
 		}
 	}
-	let mut sil = vec![0.; assi.len()];
+	let mut sil = if samples {
+		vec![0.; assi.len()]
+	} else {
+		vec![0.; 0]
+	};
 	let mut lsum: f64 = 0.;
 	let mut buf = Vec::<(usize, f64)>::new();
 	for (i, &ai) in assi.iter().enumerate() {
@@ -1015,10 +992,14 @@ where
 			.map(|(_, p)| checked_div(p.1, p.0 as f64))
 			.fold(f64::INFINITY, f64::min);
 		let s = checked_div(b - a, f64::max(a, b));
-		sil.push(s);
+		if samples {
+			sil[i] = s;
+		}
 		lsum += s;
 	}
-	println!("Total: {}", lsum / (assi.len() as f64));
+	if samples {
+		assert_eq!(sil.len(), assi.len(), "Length not as expected.");
+	}
 	(lsum / (assi.len() as f64), sil)
 }
 
@@ -1045,7 +1026,7 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam(&data, &mut meds, 10);
-		let (sil, _) = silhouette(&data, &assi);
+		let (sil, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 2, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
@@ -1062,7 +1043,7 @@ mod tests {
 		};
 		let mut meds = vec![1]; // So we need one swap
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam(&data, &mut meds, 10);
-		let (sil, _) = silhouette(&data, &assi);
+		let (sil, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 14, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 1, "iterations not as expected");
@@ -1079,7 +1060,7 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fastpam1(&data, &mut meds, 10);
-		let (sil, _) = silhouette(&data, &assi);
+		let (sil, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
@@ -1096,7 +1077,7 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = pam_swap(&data, &mut meds, 10);
-		let (sil, _) = silhouette(&data, &assi);
+		let (sil, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
@@ -1112,7 +1093,7 @@ mod tests {
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let (loss, assi, meds): (i64, _, _) = pam_build(&data, 2);
-		let (sil, _) = silhouette(&data, &assi);
+		let (sil, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3], "medoids not as expected");
@@ -1126,7 +1107,7 @@ mod tests {
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let (loss, assi, meds, n_iter, n_swap): (i64, _, _, _, _) = pam(&data, 2, 10);
-		let (sil, _) = silhouette(&data, &assi);
+		let (sil, _) = silhouette(&data, &assi, false);
 		// no swaps, because BUILD does a decent job
 		assert_eq!(n_swap, 0, "swaps not as expected");
 		assert_eq!(n_iter, 1, "iterations not as expected");
@@ -1144,7 +1125,7 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter): (i64, _, _) = alternating(&data, &mut meds, 10);
-		let (sil, _) = silhouette(&data, &assi);
+		let (sil, _) = silhouette(&data, &assi, false);
 		assert_eq!(n_iter, 3, "iterations not as expected");
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_array(assi, vec![1, 1, 1, 0, 0], "assignment not as expected");
