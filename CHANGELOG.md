@@ -8,6 +8,7 @@
 - requires specifying the loss data type
 - fix: do not fail for k=1, but return the expected result
 - add: added Silhouette index for evaluation
+- add: rand_fasterpam with shuffled processing order
 
 ## kmedoids 0.1.6 (2021-09-02)
 

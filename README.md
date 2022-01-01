@@ -43,6 +43,7 @@ For example for unsigned distances using `u32`, it may be better to use `i64` to
 ## Implemented Algorithms
 
 * **FasterPAM** (Schubert and Rousseeuw, 2020, 2021)
+* FasterPAM with an integrated additional shuffling step
 * FastPAM1 (Schubert and Rousseeuw, 2019, 2021)
 * PAM (Kaufman and Rousseeuw, 1987) with BUILD and SWAP
 * Alternating optimization (k-means-style algorithm)
