@@ -1,6 +1,6 @@
 // If you intend to use this for benchmarking, add a shuffle step and use fixed random seeds.
 // Because of ties in ORLib data sets, order matters even when you use fixed random seeds.
-use kmedoids::{fasterpam, random_initialization};
+use kmedoids::{fasterpam_par, random_initialization};
 use ndarray::Array2;
 use num_traits::{NumOps, Zero};
 use std::env;
@@ -82,11 +82,11 @@ where
 
 fn main() -> Result<(), Box<dyn Error>>{
 	let nam = env::args().nth(1).expect("no file name given");
-	let prob = read_orlib(File::open(nam)?, i32::MAX)?;
+	let prob = read_orlib(File::open(nam)?, f64::MAX)?;
 	let mut rand = rand::thread_rng();
 	let start = Instant::now();
 	let mut meds = random_initialization(prob.data.shape()[0], prob.k, &mut rand);
-	let (loss, _, iter, swaps) : (i64, _, _, _) = fasterpam(&prob.data, &mut meds, 100);
+	let (loss, _, iter, swaps) : (f64, _, _, _) = fasterpam_par(&prob.data, &mut meds, 100, 2);
 	let duration = start.elapsed();
 	println!("FasterPAM final loss: {}", loss);
 	println!("FasterPAM swaps performed: {}", swaps);
