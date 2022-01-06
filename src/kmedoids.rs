@@ -1291,12 +1291,105 @@ where
 	(lsum.div((assi.len() as u32).into()), sil)
 }
 
+/// Compute the Silhouette of a strict partitional clustering.
+///
+/// The Silhouette, proposed by Peter Rousseeuw in 1987, is a popular internal
+/// evaluation measure for clusterings. Although it is defined on arbitary metrics,
+/// it is most appropriate for evaluating "spherical" clusters, as it expects objects
+/// to be closer to all members of its own cluster than to members of other clusters.
+///
+/// Because of the additional requirement of a division operator, this implementation
+/// currently always returns a f64 result, and accepts only input distances that can be
+/// converted into f64.
+///
+/// * type `M` - matrix data type such as `ndarray::Array2` or `kmedoids::arrayadapter::LowerTriangle`
+/// * type `N` - number data type such as `u32` or `f64`
+/// * type `L` - number data type such as `f64` for the cost (use a float type)
+/// * `mat` - a pairwise distance matrix
+/// * `assi` - the cluster assignment
+/// * `samples` - whether to keep the individual samples, or not
+///
+/// returns a tuple containing:
+/// * the average silhouette
+/// * the individual silhouette values (empty if `samples = false`)
+///
+/// ## Panics
+///
+/// * panics when the dissimilarity matrix is not square
+///
+/// ## Example
+/// Given a dissimilarity matrix of size 4 x 4, use:
+/// ```
+/// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
+/// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+/// let (loss, assi, n_iter): (f64, _, _) = kmedoids::alternating(&data, &mut meds, 100);
+/// let sil: f64 = kmedoids::silhouette_par(&data, &assi, 2);
+/// println!("Silhouette is: {}", sil);
+/// ```
+pub fn silhouette_par<M, N, L>(mat: &M, assi: &[usize], threads: usize) -> L
+	where
+		N: Zero + PartialOrd + Copy + std::fmt::Display + std::marker::Sync + std::marker::Send,
+		L: AddAssign
+		+ Div<Output = L>
+		+ Sub<Output = L>
+		+ Signed
+		+ Zero
+		+ PartialOrd
+		+ Copy
+		+ From<N>
+		+ From<u32>
+		+ std::marker::Sync
+		+ std::marker::Send,
+		M: ArrayAdapter<N> + std::marker::Sync + std::marker::Send,
+{
+	fn checked_div<L>(x: L, y: L) -> L
+		where
+			L: Div<Output = L> + Zero + Copy + PartialOrd + std::marker::Sync + std::marker::Send,
+	{
+		if y > L::zero() {
+			x.div(y)
+		} else {
+			L::zero()
+		}
+	}
+	// set number of threads
+	if threads > 0 {
+		rayon::ThreadPoolBuilder::new().num_threads(threads).build_global().unwrap();
+	}
+	let mut lsum = L::zero();
+	assi.into_par_iter().enumerate().map(|(i, &ai)| {
+		let mut buf = Vec::<(u32, L)>::new();
+		buf.clear();
+		for (j, &aj) in assi.iter().enumerate() {
+			while aj >= buf.len() {
+				buf.push((0, L::zero()));
+			}
+			if i != j {
+				buf[aj].0 += 1;
+				buf[aj].1 += mat.get(i, j).into();
+			}
+		}
+		let a = checked_div(buf[ai].1, buf[ai].0.into());
+		let mut tmp = buf
+			.iter()
+			.enumerate()
+			.filter(|&(i, _)| i != ai)
+			.map(|(_, p)| checked_div(p.1, p.0.into()));
+		// Ugly hack to get the min():
+		let tmp2 = tmp.next().unwrap_or_else(L::zero);
+		let b = tmp.fold(tmp2, |x, y| if y < x { x } else { y });
+		let s = checked_div(b - a, if a > b { a } else { b });
+		s
+	}).collect::<Vec<L>>().iter().for_each(|x| lsum += *x);
+	lsum.div((assi.len() as u32).into())
+}
+
 #[cfg(test)]
 mod tests {
 	// TODO: use a larger, much more interesting example.
 	use crate::{
 		alternating, arrayadapter::LowerTriangle, fasterpam, fasterpam_par, fastpam1, pam, pam_build, pam_swap,
-		silhouette,
+		silhouette, silhouette_par,
 	};
 	fn assert_array(result: Vec<usize>, expect: Vec<usize>, msg: &'static str) {
 		assert!(
@@ -1370,8 +1463,8 @@ mod tests {
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let mut meds = vec![0, 1];
-		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam_par(&data, &mut meds, 10, 2);
-		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = fasterpam_par(&data, &mut meds, 10, 0);
+		let sil: f64 = silhouette_par(&data, &assi, 0);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 2, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
