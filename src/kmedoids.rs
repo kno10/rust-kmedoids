@@ -154,8 +154,8 @@ where
 #[inline]
 fn find_best_swap<M, N, L>(mat: &M, removal_loss: &[L], data: &[Rec<N>], j: usize) -> (L, usize)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let mut ploss = removal_loss.to_vec();
@@ -181,8 +181,8 @@ where
 #[inline]
 fn find_best_swap_pam<M, N, L>(mat: &M, med: &[usize], data: &[Rec<N>], j: usize) -> (L, usize)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let recj = &data[j];
@@ -242,8 +242,8 @@ where
 #[inline]
 fn do_swap<M, N, L>(mat: &M, med: &mut Vec<usize>, data: &mut Vec<Rec<N>>, b: usize, j: usize) -> L
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -323,7 +323,7 @@ pub fn random_initialization(n: usize, k: usize, rng: &mut impl rand::Rng) -> Ve
 }
 
 /// Run the FasterPAM algorithm.
-/// 
+///
 /// If used multiple times, it is better to additionally shuffle the input data,
 /// to increase randomness of the solutions found and hence increase the chance
 /// of finding a better solution.
@@ -360,8 +360,8 @@ pub fn fasterpam<M, N, L>(
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -376,7 +376,6 @@ where
 	#[cfg(feature = "assertions")]
 	debug_validate_assignment(mat, med, &data);
 
-	// println!("Initial loss is {}", loss);
 	let mut removal_loss = vec![L::zero(); k];
 	update_removal_loss(&data, &mut removal_loss);
 	let mut lastswap = n;
@@ -384,7 +383,6 @@ where
 	let mut iter = 0;
 	while iter < maxiter {
 		iter += 1;
-		// println!("Iteration {} before {}", iter, loss);
 		let swaps_before = n_swaps;
 		for j in 0..n {
 			if j == lastswap {
@@ -401,7 +399,6 @@ where
 			lastswap = j;
 			// perform the swap
 			let newloss = do_swap(mat, med, &mut data, b, j);
-			// println!("{} + {} = {} vs. {}", loss, change, loss + change, newloss);
 			if newloss >= loss {
 				break; // Probably numerically unstable now.
 			}
@@ -412,14 +409,12 @@ where
 			break; // converged
 		}
 	}
-	// println!("final loss: {}", loss);
-	// println!("number of swaps: {}", n_swaps);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
 	(loss, assi, iter, n_swaps)
 }
 
 /// Run the FasterPAM algorithm with additional randomization.
-/// 
+///
 /// This increases the chance of finding a better solution when used multiple times,
 /// as it decreases the dependency on the input data order.
 ///
@@ -458,8 +453,8 @@ pub fn rand_fasterpam<M, N, L>(
 	rng: &mut impl rand::Rng,
 ) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -474,7 +469,6 @@ where
 	#[cfg(feature = "assertions")]
 	debug_validate_assignment(mat, med, &data);
 
-	// println!("Initial loss is {}", loss);
 	let mut removal_loss = vec![L::zero(); k];
 	update_removal_loss(&data, &mut removal_loss);
 	let mut lastswap = n;
@@ -483,7 +477,6 @@ where
 	let seq = rand::seq::index::sample(rng, n, n); // random shuffling
 	while iter < maxiter {
 		iter += 1;
-		// println!("Iteration {} before {}", iter, loss);
 		let swaps_before = n_swaps;
 		for j in seq.iter() {
 			if j == lastswap {
@@ -500,7 +493,6 @@ where
 			lastswap = j;
 			// perform the swap
 			let newloss = do_swap(mat, med, &mut data, b, j);
-			// println!("{} + {} = {} vs. {}", loss, change, loss + change, newloss);
 			if newloss >= loss {
 				break; // Probably numerically unstable now.
 			}
@@ -511,8 +503,6 @@ where
 			break; // converged
 		}
 	}
-	// println!("final loss: {}", loss);
-	// println!("number of swaps: {}", n_swaps);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
 	(loss, assi, iter, n_swaps)
 }
@@ -557,8 +547,8 @@ pub fn fastpam1<M, N, L>(
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -572,13 +562,11 @@ where
 	let mut loss = initial_assignment(mat, med, &mut data);
 	#[cfg(feature = "assertions")]
 	debug_validate_assignment(mat, med, &data);
-	// println!("Initial loss is {}", loss);
 	let mut removal_loss = vec![L::zero(); k];
 	let mut n_swaps = 0;
 	let mut iter = 0;
 	while iter < maxiter {
 		iter += 1;
-		// println!("Iteration {} before {}", iter, loss);
 		let mut best = (L::zero(), usize::MAX, usize::MAX);
 		update_removal_loss(&data, &mut removal_loss);
 		for j in 0..n {
@@ -595,7 +583,6 @@ where
 			n_swaps += 1;
 			// perform the swap
 			let newloss = do_swap(mat, med, &mut data, best.1, best.2);
-			// println!("{} + {} = {} vs. {}", loss, best.0, loss + best.0, newloss);
 			if newloss >= loss {
 				break; // Probably numerically unstable now.
 			}
@@ -604,8 +591,6 @@ where
 			break; // No improvement, or NaN.
 		}
 	}
-	// println!("final loss: {}", loss);
-	// println!("number of swaps: {}", n_swaps);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
 	(loss, assi, iter, n_swaps)
 }
@@ -619,8 +604,8 @@ fn pam_optimize<M, N, L>(
 	mut loss: L,
 ) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -632,12 +617,10 @@ where
 	}
 	#[cfg(feature = "assertions")]
 	debug_validate_assignment(mat, med, &data);
-	// println!("Initial loss is {}", loss);
 	let mut n_swaps = 0;
 	let mut iter = 0;
 	while iter < maxiter {
 		iter += 1;
-		// println!("Iteration {} before {}", iter, loss);
 		let mut best = (L::zero(), k, usize::MAX);
 		for j in 0..n {
 			if j == data[j].near.i as usize {
@@ -653,7 +636,6 @@ where
 			n_swaps += 1;
 			// perform the swap
 			let newloss = do_swap(mat, med, data, best.1, best.2);
-			// println!("{} + {} = {} vs. {}", loss, best.0, loss + best.0, newloss);
 			if newloss >= loss {
 				break; // Probably numerically unstable now.
 			}
@@ -662,8 +644,6 @@ where
 			break; // No improvement, or NaN.
 		}
 	}
-	// println!("final loss: {}", loss);
-	// println!("number of swaps: {}", n_swaps);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
 	(loss, assi, iter, n_swaps)
 }
@@ -675,8 +655,8 @@ fn pam_build_initialize<M, N, L>(
 	k: usize,
 ) -> L
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -788,8 +768,8 @@ pub fn pam_swap<M, N, L>(
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let mut data = Vec::<Rec<N>>::with_capacity(mat.len());
@@ -827,8 +807,8 @@ where
 /// ```
 pub fn pam_build<M, N, L>(mat: &M, k: usize) -> (L, Vec<usize>, Vec<usize>)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -875,8 +855,8 @@ where
 /// ```
 pub fn pam<M, N, L>(mat: &M, k: usize, maxiter: usize) -> (L, Vec<usize>, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -895,8 +875,8 @@ where
 #[inline]
 fn assign_nearest<M, N, L>(mat: &M, med: &[usize], data: &mut Vec<usize>) -> L
 where
-	N: PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -934,8 +914,8 @@ pub fn choose_medoid_within_partition<M, N, L>(
 	m: usize,
 ) -> (bool, L)
 where
-	N: PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let first = med[m];
@@ -999,8 +979,8 @@ where
 /// ```
 pub fn alternating<M, N, L>(mat: &M, med: &mut Vec<usize>, maxiter: usize) -> (L, Vec<usize>, usize)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
+	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let mut assi = Vec::<usize>::with_capacity(mat.len());
@@ -1057,7 +1037,7 @@ where
 /// ```
 pub fn silhouette<M, N, L>(mat: &M, assi: &[usize], samples: bool) -> (L, Vec<L>)
 where
-	N: Zero + PartialOrd + Copy + std::fmt::Display,
+	N: Zero + PartialOrd + Copy,
 	L: AddAssign
 		+ Div<Output = L>
 		+ Sub<Output = L>
@@ -1171,9 +1151,9 @@ mod tests {
 	}
 
 	#[cfg(feature = "rand")]
-	use rand::{rngs::StdRng, SeedableRng};
-	#[cfg(feature = "rand")]
 	use crate::rand_fasterpam;
+	#[cfg(feature = "rand")]
+	use rand::{rngs::StdRng, SeedableRng};
 	#[cfg(feature = "rand")]
 	#[test]
 	fn testrand_fasterpam() {
@@ -1183,7 +1163,8 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let mut rng = StdRng::seed_from_u64(1);
-		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = rand_fasterpam(&data, &mut meds, 10, &mut rng);
+		let (loss, assi, n_iter, n_swap): (i64, _, _, _) =
+			rand_fasterpam(&data, &mut meds, 10, &mut rng);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
