@@ -6,6 +6,7 @@
   (e.g., u32 input, i64 loss -- loss must be signed)
 - removed safe_add trait -- use a higher precision loss type instead
 - requires specifying the loss data type
+- code modularization and cleanups
 - fix: do not fail for k=1, but return the expected result
 - add: added Silhouette index for evaluation
 - add: rand_fasterpam with shuffled processing order
