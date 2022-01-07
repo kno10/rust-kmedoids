@@ -35,6 +35,7 @@ mod fastpam1;
 mod initialization;
 mod pam;
 mod par_fasterpam;
+mod par_silhouette;
 mod silhouette;
 mod util;
 
@@ -45,4 +46,5 @@ pub use crate::fastpam1::*;
 pub use crate::initialization::*;
 pub use crate::pam::*;
 pub use crate::par_fasterpam::*;
+pub use crate::par_silhouette::*;
 pub use crate::silhouette::*;

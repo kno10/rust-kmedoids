@@ -178,7 +178,7 @@ where
 #[cfg(test)]
 mod tests {
 	// TODO: use a larger, much more interesting example.
-	use crate::{arrayadapter::LowerTriangle, par_fasterpam, silhouette, util::assert_array};
+	use crate::{arrayadapter::LowerTriangle, par_fasterpam, par_silhouette, util::assert_array};
 
 	#[test]
 	fn test_fasterpam_par() {
@@ -188,7 +188,7 @@ mod tests {
 		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = par_fasterpam(&data, &mut meds, 10, 2);
-		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		let sil: f64 = par_silhouette(&data, &assi, 0);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 2, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
