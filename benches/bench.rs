@@ -62,7 +62,7 @@ fn bench_par_fasterpam(b: &mut Bencher) {
 	}
 	b.iter(|| {
 		let mut med = vec![0, 1, 2, 3, 4];
-		let (loss, assignment, _, _): (i32, _, _, _) = par_fasterpam(&mat, &mut med, 100);
+		let (loss, assignment, _, _): (i32, _, _, _) = par_fasterpam(&mat, &mut med, 100, &mut rng);
 		black_box(loss);
 		black_box(assignment);
 	});

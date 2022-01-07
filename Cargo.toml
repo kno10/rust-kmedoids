@@ -40,7 +40,7 @@ byteorder = "1.4" # for mnist-kmedoids
 
 [features]
 default = ["rand", "ndarray", "parallel"]
-parallel = ["rayon", "ndarray"]
+parallel = ["rand", "ndarray", "rayon"]
 # Enable additional assertions
 assertions = []
 

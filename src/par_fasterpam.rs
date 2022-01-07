@@ -19,6 +19,7 @@ use std::sync::{Arc, Mutex};
 /// * `mat` - a pairwise distance matrix
 /// * `med` - the list of medoids
 /// * `maxiter` - the maximum number of iterations allowed
+/// * `rng` - random number generator for shuffling the input data
 ///
 /// returns a tuple containing:
 /// * the final loss
@@ -36,13 +37,14 @@ use std::sync::{Arc, Mutex};
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 /// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::par_fasterpam(&data, &mut meds, 100);
+/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::par_fasterpam(&data, &mut meds, 100, &mut rand::thread_rng());
 /// println!("Loss is: {}", loss);
 /// ```
 pub fn par_fasterpam<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
 	maxiter: usize,
+	rng: &mut impl rand::Rng,
 ) -> (L, Vec<usize>, usize, usize)
 where
 	N: Zero + PartialOrd + Copy + Sync + Send,
@@ -61,10 +63,11 @@ where
 	let mut removal_loss = vec![L::zero(); k];
 	update_removal_loss(&data, &mut removal_loss);
 	let (mut lastswap, mut n_swaps, mut iter) = (n, 0, 0);
+	let seq = rand::seq::index::sample(rng, n, n); // random shuffling
 	while iter < maxiter {
 		iter += 1;
 		let swaps_before = n_swaps;
-		for j in 0..n {
+		for j in seq.iter() {
 			if j == lastswap {
 				break;
 			}
@@ -236,6 +239,7 @@ where
 mod tests {
 	// TODO: use a larger, much more interesting example.
 	use crate::{arrayadapter::LowerTriangle, par_fasterpam, par_silhouette, util::assert_array};
+	use rand::{rngs::StdRng, SeedableRng};
 
 	#[test]
 	fn test_fasterpam_par() {
@@ -244,13 +248,15 @@ mod tests {
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
 		let mut meds = vec![0, 1];
-		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = par_fasterpam(&data, &mut meds, 10);
+		let mut rng = StdRng::seed_from_u64(1);
+		let (loss, assi, n_iter, n_swap): (i64, _, _, _) =
+			par_fasterpam(&data, &mut meds, 10, &mut rng);
 		let sil: f64 = par_silhouette(&data, &assi);
 		assert_eq!(loss, 4, "loss not as expected");
-		assert_eq!(n_swap, 2, "swaps not as expected");
+		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
-		assert_array(meds, vec![0, 3], "medoids not as expected");
+		assert_array(meds, vec![0, 4], "medoids not as expected");
 		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
 	}
 }
