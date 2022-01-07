@@ -13,7 +13,7 @@ repository = "https://github.com/kno10/rust-kmedoids"
 
 [lib]
 name = "kmedoids"
-path = "src/kmedoids.rs"
+path = "src/mod.rs"
 test = true
 doc = true
 
