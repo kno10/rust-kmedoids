@@ -26,13 +26,15 @@ required-features = ["ndarray", "rand"]
 num-traits = "0.2"
 ndarray = {version = "0.15", optional = true}
 rand  = {version = "0.8", optional = true}
+rayon = {version = "1.5.1", optional = true}
+num_cpus = {version = "1.13.1", optional = true}
 
 [dev-dependencies]
 ndarray = "0.15"
 rand  = "0.8"
 
 [features]
-default = ["rand", "ndarray"]
+default = ["rand", "ndarray", "rayon", "num_cpus"]
 # Enable additional assertions
 assertions = []
 
