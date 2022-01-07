@@ -44,6 +44,7 @@ For example for unsigned distances using `u32`, it may be better to use `i64` to
 
 * **FasterPAM** (Schubert and Rousseeuw, 2020, 2021)
 * FasterPAM with an integrated additional shuffling step
+* Parallelized FasterPAM with an integrated additional shuffling step
 * FastPAM1 (Schubert and Rousseeuw, 2019, 2021)
 * PAM (Kaufman and Rousseeuw, 1987) with BUILD and SWAP
 * Alternating optimization (k-means-style algorithm)
@@ -51,11 +52,16 @@ For example for unsigned distances using `u32`, it may be better to use `i64` to
 
 Note that the k-means-like algorithm for k-medoids tends to find much worse solutions.
 
+The additional shuffling step for FasterPAM is beneficial if you intend to restart
+k-medoids multiple times on the same data (to find better solutions).
+The parallel implementation is typically faster when you have more than 5000 instances.
+
 ## Rust Dependencies
 
 * [num-traits](https://docs.rs/num-traits/) for supporting different numeric types
 * [ndarray](https://docs.rs/ndarray/) for arrays (optional)
 * [rand](https://docs.rs/rand/) for random initialization (optional)
+* [rayon](https://docs.rs/rayon/) for parallelization (optional)
 
 ## License: GPL-3 or later
 
