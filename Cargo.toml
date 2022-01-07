@@ -20,21 +20,27 @@ doc = true
 [[example]]
 name = "orlib-kmedoids"
 path = "examples/orlib-kmedoids.rs"
-required-features = ["ndarray", "rand"]
+required-features = ["ndarray", "rand", "parallel"]
+
+[[example]]
+name = "mnist-kmedoids"
+path = "examples/mnist-kmedoids.rs"
+required-features = ["ndarray", "rand", "parallel"]
 
 [dependencies]
 num-traits = "0.2"
 ndarray = {version = "0.15", optional = true}
 rand  = {version = "0.8", optional = true}
-rayon = {version = "1.5.1", optional = true}
-num_cpus = {version = "1.13.1", optional = true}
+rayon = {version = "1.5", optional = true}
 
 [dev-dependencies]
 ndarray = "0.15"
 rand  = "0.8"
+byteorder = "1.4" # for mnist-kmedoids
 
 [features]
-default = ["rand", "ndarray", "rayon", "num_cpus"]
+default = ["rand", "ndarray", "parallel"]
+parallel = ["rayon", "ndarray"]
 # Enable additional assertions
 assertions = []
 

@@ -1,4 +1,5 @@
 use crate::arrayadapter::ArrayAdapter;
+use crate::silhouette::checked_div;
 use core::ops::{AddAssign, Div, Sub};
 use num_traits::{Signed, Zero};
 use rayon::prelude::*;
@@ -21,7 +22,6 @@ use std::convert::From;
 /// * `mat` - a pairwise distance matrix
 /// * `assi` - the cluster assignment
 /// * `samples` - whether to keep the individual samples, or not
-/// * `threads` - number of threads to use
 ///
 /// returns a tuple containing:
 /// * the average silhouette
@@ -37,10 +37,11 @@ use std::convert::From;
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 /// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
 /// let (loss, assi, n_iter): (f64, _, _) = kmedoids::alternating(&data, &mut meds, 100);
-/// let sil: f64 = kmedoids::par_silhouette(&data, &assi, 2);
+/// let sil: f64 = kmedoids::par_silhouette(&data, &assi);
 /// println!("Silhouette is: {}", sil);
 /// ```
-pub fn par_silhouette<M, N, L>(mat: &M, assi: &[usize], threads: usize) -> L
+#[cfg(feature = "parallel")]
+pub fn par_silhouette<M, N, L>(mat: &M, assi: &[usize]) -> L
 where
 	N: Zero + PartialOrd + Copy + Sync + Send,
 	L: AddAssign
@@ -56,23 +57,6 @@ where
 		+ Send,
 	M: ArrayAdapter<N> + Sync + Send,
 {
-	fn checked_div<L>(x: L, y: L) -> L
-	where
-		L: Div<Output = L> + Zero + Copy + PartialOrd + std::marker::Sync + std::marker::Send,
-	{
-		if y > L::zero() {
-			x.div(y)
-		} else {
-			L::zero()
-		}
-	}
-	// set number of threads
-	if threads > 0 {
-		rayon::ThreadPoolBuilder::new()
-			.num_threads(threads)
-			.build_global()
-			.unwrap();
-	}
 	let mut lsum = L::zero();
 	assi.into_par_iter()
 		.enumerate()
@@ -97,8 +81,7 @@ where
 			// Ugly hack to get the min():
 			let tmp2 = tmp.next().unwrap_or_else(L::zero);
 			let b = tmp.fold(tmp2, |x, y| if y < x { x } else { y });
-			let s = checked_div(b - a, if a > b { a } else { b });
-			s
+			checked_div(b - a, if a > b { a } else { b }) // return value
 		})
 		.collect::<Vec<L>>()
 		.iter()

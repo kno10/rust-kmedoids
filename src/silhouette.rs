@@ -52,16 +52,6 @@ where
 		+ From<u32>,
 	M: ArrayAdapter<N>,
 {
-	fn checked_div<L>(x: L, y: L) -> L
-	where
-		L: Div<Output = L> + Zero + Copy + PartialOrd,
-	{
-		if y > L::zero() {
-			x.div(y)
-		} else {
-			L::zero()
-		}
-	}
 	let mut sil = if samples {
 		vec![L::zero(); assi.len()]
 	} else {
@@ -102,4 +92,16 @@ where
 		assert_eq!(sil.len(), assi.len(), "Length not as expected.");
 	}
 	(lsum.div((assi.len() as u32).into()), sil)
+}
+
+// helper function, returns 0 on division by 0
+pub(crate) fn checked_div<L>(x: L, y: L) -> L
+where
+	L: Div<Output = L> + Zero + Copy + PartialOrd,
+{
+	if y > L::zero() {
+		x.div(y)
+	} else {
+		L::zero()
+	}
 }

@@ -58,9 +58,7 @@ where
 
 	let mut removal_loss = vec![L::zero(); k];
 	update_removal_loss(&data, &mut removal_loss);
-	let mut lastswap = n;
-	let mut n_swaps = 0;
-	let mut iter = 0;
+	let (mut lastswap, mut n_swaps, mut iter) = (n, 0, 0);
 	while iter < maxiter {
 		iter += 1;
 		let swaps_before = n_swaps;
@@ -137,8 +135,7 @@ where
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
-	let n = mat.len();
-	let k = med.len();
+	let (n, k) = (mat.len(), med.len());
 	if k == 1 {
 		let assi = vec![0; n];
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
@@ -149,9 +146,7 @@ where
 
 	let mut removal_loss = vec![L::zero(); k];
 	update_removal_loss(&data, &mut removal_loss);
-	let mut lastswap = n;
-	let mut n_swaps = 0;
-	let mut iter = 0;
+	let (mut lastswap, mut n_swaps, mut iter) = (n, 0, 0);
 	let seq = rand::seq::index::sample(rng, n, n); // random shuffling
 	while iter < maxiter {
 		iter += 1;
@@ -193,8 +188,7 @@ where
 	L: AddAssign + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
-	let n = mat.len();
-	let k = med.len();
+	let (n, k) = (mat.len(), med.len());
 	assert!(mat.is_square(), "Dissimilarity matrix is not square");
 	assert!(n <= u32::MAX as usize, "N is too large");
 	assert!(k > 0 && k < u32::MAX as usize, "invalid N");
@@ -314,40 +308,41 @@ where
 	assert!(b < med.len(), "invalid medoid number");
 	assert!(j < n, "invalid object number");
 	med[b] = j;
-	let mut newloss = L::zero();
-	for (o, reco) in data.iter_mut().enumerate() {
-		if o == j {
-			if reco.near.i != b as u32 {
-				reco.seco = reco.near;
+	data.iter_mut()
+		.enumerate()
+		.map(|(o, reco)| {
+			if o == j {
+				if reco.near.i != b as u32 {
+					reco.seco = reco.near;
+				}
+				reco.near = DistancePair::new(b as u32, N::zero());
+				return L::zero();
 			}
-			reco.near = DistancePair::new(b as u32, N::zero());
-			continue;
-		}
-		let djo = mat.get(j, o);
-		// Nearest medoid is gone:
-		if reco.near.i == b as u32 {
-			if djo < reco.seco.d {
-				reco.near = DistancePair::new(b as u32, djo);
+			let djo = mat.get(j, o);
+			// Nearest medoid is gone:
+			if reco.near.i == b as u32 {
+				if djo < reco.seco.d {
+					reco.near = DistancePair::new(b as u32, djo);
+				} else {
+					reco.near = reco.seco;
+					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, djo);
+				}
 			} else {
-				reco.near = reco.seco;
-				reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, djo);
+				// nearest not removed
+				if djo < reco.near.d {
+					reco.seco = reco.near;
+					reco.near = DistancePair::new(b as u32, djo);
+				} else if reco.seco.i == b as u32 {
+					// second nearest was replaced
+					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, djo);
+				} else if djo < reco.seco.d {
+					reco.seco = DistancePair::new(b as u32, djo);
+				}
 			}
-		} else {
-			// nearest not removed
-			if djo < reco.near.d {
-				reco.seco = reco.near;
-				reco.near = DistancePair::new(b as u32, djo);
-			} else if reco.seco.i == b as u32 {
-				// second nearest was replaced
-				reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, djo);
-			} else if djo < reco.seco.d {
-				reco.seco = DistancePair::new(b as u32, djo);
-			}
-		}
-		newloss += L::from(reco.near.d);
-	}
-	debug_assert_assignment(mat, med, data);
-	newloss
+			L::from(reco.near.d)
+		})
+		.reduce(L::add)
+		.unwrap()
 }
 
 #[cfg(test)]
