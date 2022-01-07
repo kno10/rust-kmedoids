@@ -20,3 +20,21 @@
 pub fn random_initialization(n: usize, k: usize, rng: &mut impl rand::Rng) -> Vec<usize> {
 	rand::seq::index::sample(rng, n, k).into_vec()
 }
+
+/// Use the first objects as initial medoids.
+///
+/// * `k` - number of clusters to find
+///
+/// returns 0..k-1 as initial medoids
+///
+/// ## Example
+///
+/// Given a dissimilarity matrix of size n x n, use:
+/// ```
+/// let mut meds = kmedoids::first_k(2);
+/// println!("Chosen medoids: {:?}", meds);
+/// ```
+#[inline]
+pub fn first_k(k: usize) -> Vec<usize> {
+	(0..k).collect()
+}
