@@ -1,6 +1,6 @@
 # Changelog
 
-## kmedoids 0.2.0 (2021-12-31)
+## kmedoids 0.2.0 (2022-01-13)
 
 - API change: allow input and loss types to differ
   (e.g., u32 input, i64 loss -- loss must be signed)
