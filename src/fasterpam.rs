@@ -332,11 +332,11 @@ where
 				if djo < reco.near.d {
 					reco.seco = reco.near;
 					reco.near = DistancePair::new(b as u32, djo);
+				} else if djo < reco.seco.d {
+					reco.seco = DistancePair::new(b as u32, djo);
 				} else if reco.seco.i == b as u32 {
 					// second nearest was replaced
 					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, djo);
-				} else if djo < reco.seco.d {
-					reco.seco = DistancePair::new(b as u32, djo);
 				}
 			}
 			L::from(reco.near.d)

@@ -17,7 +17,6 @@ fn read_mnist(path: String) -> Result<Problem<f64>, Box<dyn Error>>
 	println!("Reading MNIST file");
 	// Read whole file in memory
 	let mut content: Vec<u8> = Vec::new();
-	// let path = "C:/Users/lars/Documents/Uni/Sparse_fasterPAM/t10k-images-idx3-ubyte";
 	let mut file = {
 		let mut fh = File::open(&path)
 			.unwrap_or_else(|_| panic!("Unable to find path to images at {:?}.", &path));
