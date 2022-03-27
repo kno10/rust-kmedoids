@@ -1,5 +1,10 @@
 # Changelog
 
+## kmedoids 0.3.0 (2022-03-27)
+
+- reorder branches slightly (Lars Lenssen)
+- no major changes in Rust, only in the Python API
+
 ## kmedoids 0.2.0 (2022-01-13)
 
 - API change: allow input and loss types to differ

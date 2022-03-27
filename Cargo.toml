@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "kmedoids"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Erich Schubert <erich.schubert@tu-dortmund.de>"]
 description = "k-Medoids clustering with the FasterPAM algorithm"
 homepage = "https://github.com/kno10/rust-kmedoids"
@@ -32,6 +32,9 @@ num-traits = "0.2"
 ndarray = {version = "0.15", optional = true}
 rand  = {version = "0.8", optional = true}
 rayon = {version = "1.5", optional = true}
+# crossbeam is transitive via rayon, avoid a yanked version warning:
+# with rayon-core 1.9.2 this can likely be removed
+crossbeam-utils = {version = "^0.8.8", optional = true}
 
 [dev-dependencies]
 ndarray = "0.15"
