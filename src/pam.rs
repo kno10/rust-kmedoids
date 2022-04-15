@@ -171,7 +171,7 @@ where
 		iter += 1;
 		let mut best = (L::zero(), k, usize::MAX);
 		for j in 0..n {
-			if j == data[j].near.i as usize {
+			if j == med[data[j].near.i as usize] {
 				continue; // This already is a medoid
 			}
 			let (change, b) = find_best_swap_pam(mat, med, data, j);

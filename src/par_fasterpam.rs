@@ -71,7 +71,7 @@ where
 			if j == lastswap {
 				break;
 			}
-			if j == data[j].near.i as usize {
+			if j == med[data[j].near.i as usize] {
 				continue; // This already is a medoid
 			}
 			let (change, b) = par_find_best_swap(mat, &removal_loss, &data, j);

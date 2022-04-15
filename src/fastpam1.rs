@@ -64,7 +64,7 @@ where
 		let mut best = (L::zero(), usize::MAX, usize::MAX);
 		update_removal_loss(&data, &mut removal_loss);
 		for j in 0..n {
-			if j == data[j].near.i as usize {
+			if j == med[data[j].near.i as usize] {
 				continue; // This already is a medoid
 			}
 			let (change, b) = find_best_swap(mat, &removal_loss, &data, j);
