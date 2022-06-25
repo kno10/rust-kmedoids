@@ -268,7 +268,7 @@ where
 	// choose remaining medoids
 	for l in 1..k {
 		best = (L::zero(), k);
-		for (i, _) in data.iter().enumerate().skip(1) {
+		for (i, _) in data.iter().enumerate() {
 			let mut sum = -L::from(data[i].near.d);
 			for (j, dj) in data.iter().enumerate() {
 				if j != i {
