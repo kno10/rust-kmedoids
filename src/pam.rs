@@ -269,7 +269,7 @@ where
 	for l in 1..k {
 		best = (L::zero(), k);
 		for (i, _) in data.iter().enumerate().skip(1) {
-			let mut sum = L::zero();
+			let mut sum = -L::from(data[i].near.d);
 			for (j, dj) in data.iter().enumerate() {
 				if j != i {
 					let d = mat.get(i, j);
@@ -282,7 +282,7 @@ where
 				best = (sum, i);
 			}
 		}
-		assert!(best.0 <= L::zero());
+		if best.0 >= L::zero() { break; } // No further improvements - duplicates etc.
 		// Update assignments:
 		loss = L::zero();
 		for (j, recj) in data.iter_mut().enumerate() {

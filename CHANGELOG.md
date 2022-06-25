@@ -1,5 +1,16 @@
 # Changelog
 
+## kmedoids 0.3.2 (2022-06-25)
+
+- bug fix in swap where the first k points were ignored instead of the centers (Lars Lenssen)
+- small bug fix in PAM BUILD (noticable for tiny data sets with large k only)
+- return less than k centers in BUILD if the total deviation already is 0 (less than k unique points)
+- documentation improvement and packaging improvements in Python bindings
+
+## kmedoids 0.3.1 (2022-04-05)
+
+- no changes in Rust, only in the Python API
+
 ## kmedoids 0.3.0 (2022-03-27)
 
 - reorder branches slightly (Lars Lenssen)
