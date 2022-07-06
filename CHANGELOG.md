@@ -1,5 +1,9 @@
 # Changelog
 
+## kmedoids 0.3.3 (2022-07-06)
+
+- another bug fix in PAM BUILD, which ignored the first object
+
 ## kmedoids 0.3.2 (2022-06-25)
 
 - bug fix in swap where the first k points were ignored instead of the centers (Lars Lenssen)
