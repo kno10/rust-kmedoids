@@ -63,7 +63,7 @@ where
 /// Assign each to the nearest medoid, return loss
 #[inline]
 #[allow(clippy::or_fun_call)] // zero() is fine
-fn assign_nearest<M, N, L>(mat: &M, med: &[usize], data: &mut [usize]) -> L
+pub(crate) fn assign_nearest<M, N, L>(mat: &M, med: &[usize], data: &mut [usize]) -> L
 where
 	N: PartialOrd + Copy,
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,

@@ -32,8 +32,13 @@ mod alternating;
 pub mod arrayadapter;
 mod fasterpam;
 mod fastpam1;
+mod fastmsc;
+mod fastermsc;
 mod initialization;
 mod pam;
+mod pamsil;
+mod pammedsil;
+mod pammedsilnaive;
 #[cfg(feature = "parallel")]
 mod par_fasterpam;
 #[cfg(feature = "parallel")]
@@ -45,8 +50,12 @@ pub use crate::alternating::*;
 pub use crate::arrayadapter::ArrayAdapter;
 pub use crate::fasterpam::*;
 pub use crate::fastpam1::*;
+pub use crate::fastmsc::*;
+pub use crate::fastermsc::*;
 pub use crate::initialization::*;
 pub use crate::pam::*;
+pub use crate::pamsil::*;
+pub use crate::pammedsil::*;
 #[cfg(feature = "parallel")]
 pub use crate::par_fasterpam::*;
 #[cfg(feature = "parallel")]

@@ -235,7 +235,7 @@ where
 }
 
 /// Not exposed. Use pam_build or pam.
-fn pam_build_initialize<M, N, L>(
+pub(crate) fn pam_build_initialize<M, N, L>(
 	mat: &M,
 	meds: &mut Vec<usize>,
 	data: &mut Vec<Rec<N>>,
