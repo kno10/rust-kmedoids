@@ -81,8 +81,6 @@ pub fn fastmsc<M, N, L>(
 				continue; // This already is a medoid
 			}
 			let (change, b) = find_best_swap(mat, &removal_loss, &data, j);
-			// println!("change: {}", change);
-			// println!("best0: {}", best.0);
 			if change <= best.0 {
 				continue; // No improvement
 			}
@@ -91,17 +89,7 @@ pub fn fastmsc<M, N, L>(
 		if best.0 > L::zero() {
 			n_swaps += 1;
 			// perform the swap
-			println!("swap: {}", n_swaps);
-			println!("old_loss: {}", loss);
-			println!("change: {}", best.0);
-			println!("changed med: {}", best.1);
-			println!("new med: {}", best.2);
-			println!("old medoids{:?}", med);
 			let newloss = do_swap(mat, med, &mut data, best.1, best.2);
-			println!("new medoids{:?}", med);
-			println!("newloss: {}", newloss);
-			println!("{}", n_swaps);
-
 			if newloss <= loss {
 				break; // Probably numerically unstable now.
 			}

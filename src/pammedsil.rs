@@ -369,7 +369,7 @@ mod tests {
 		let mut meds = vec![0, 1, 2];
 		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = pammedsil_swap(&data, &mut meds, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
-		println!("Fast: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
+		println!("PAMMedSil: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
 		assert_eq!(loss, 0.9047619047619048, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");

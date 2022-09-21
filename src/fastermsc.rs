@@ -79,8 +79,6 @@ pub fn fastermsc<M, N, L>(
 				continue; // This already is a medoid
 			}
 			let (change, b) = find_best_swap(mat, &removal_loss, &data, j);
-			println!("change: {}", change);
-			// println!("best0: {}", best.0);
 			if change <= L::zero() {
 				continue; // No improvement
 			}
