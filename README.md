@@ -1,6 +1,6 @@
 # k-Medoids Clustering in Rust with FasterPAM
 
-This Rust crate implements k-medoids clustering with PAM.
+This Rust crate implements k-medoids clustering with PAM and variants of clustering by direct optimization of the (Medoid) Silhouette.
 It can be used with arbitrary dissimilarites, as it requires a dissimilarity matrix as input.
 
 For further details on the implemented algorithm FasterPAM, see:
@@ -20,6 +20,12 @@ an earlier (slower, and now obsolete) version was published as:
 > Preprint: <https://arxiv.org/abs/1810.05691>
 
 This is a port of the original Java code from [ELKI](https://elki-project.github.io/) to Rust.
+
+For further details on the implemented algorithm FasterMSC, see:
+
+> Lars Lenssen, Erich Schubert  
+> **Clustering by Direct Optimization of the Medoid Silhouette**  
+> In: 15th International Conference on Similarity Search and Applications (SISAP 2022)
 
 If you use this code in scientific work, please cite above papers. Thank you.
 
@@ -49,6 +55,10 @@ For example for unsigned distances using `u32`, it may be better to use `i64` to
 * PAM (Kaufman and Rousseeuw, 1987) with BUILD and SWAP
 * Alternating optimization (k-means-style algorithm)
 * Silhouette index for evaluation (Rousseeuw, 1987)
+* FasterMSC (Lenssen and Schubert, 2022)
+* FastMSC (Lenssen and Schubert, 2022)
+* PAMSIL (Van der Laan and Pollard, 2003)
+* PAMMEDSIL (Van der Laan and Pollard, 2003)
 
 Note that the k-means-like algorithm for k-medoids tends to find much worse solutions.
 
