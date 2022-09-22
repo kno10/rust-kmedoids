@@ -185,46 +185,6 @@ pub(crate) fn find_best_swap<M, N, L>(
 	(bloss + acc, b) // add the shared accumulator
 }
 
-/// Find the best swap for object j - FastMSC version
-#[inline]
-pub(crate) fn find_best_swap<M, N, L>(
-	mat: &M,
-	removal_loss: &[L],
-	data: &[Reco<N>],
-	j: usize,
-) -> (L, usize)
-	where
-		N: Zero + PartialOrd + Copy + std::fmt::Display,
-		L: Float + AddAssign + From<N> + std::fmt::Display,
-		M: ArrayAdapter<N>,
-{
-	let mut ploss = removal_loss.to_vec();
-	// Improvement from the journal version:
-	let mut acc = L::zero();
-	for (o, reco) in data.iter().enumerate() {
-		let djo = mat.get(j, o);
-		if djo < reco.near.d {
-			acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(djo, reco.near.d);
-			// loss already includes (dt - ds) - (ds - dn), remove
-			ploss[reco.near.i as usize] += _loss::<N, L>(djo, reco.near.d) + _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.near.d + djo, reco.seco.d);
-			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, reco.seco.d);
-		} else if djo < reco.seco.d {
-			acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, djo);
-			ploss[reco.near.i as usize] += _loss::<N, L>(reco.near.d, djo) + _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.near.d + djo, reco.seco.d);
-			// loss already includes (dt - ds) - (ds - dn), adjust to 2*d(xo) - ds - dt
-			// loss already includes (dt - ds), adjust to 2*d(xo) - ds - dt
-			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, reco.seco.d);
-		} else if djo < reco.third.d {
-			// loss already includes (dt - ds) - (ds - dn), adjust to d(xo)- dt
-			ploss[reco.near.i as usize] += _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.seco.d, djo);
-			// loss already includes (dt - ds), adjust to d(xo)- dt
-			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, djo);
-		}
-	}
-	let (b, bloss) = find_max(&mut ploss.iter());
-	(bloss + acc, b) // add the shared accumulator
-}
-
 /// Update the loss when removing each medoid
 pub(crate) fn update_removal_loss<N, L>(data: &[Reco<N>], loss: &mut Vec<L>)
 	where

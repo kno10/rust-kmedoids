@@ -38,7 +38,6 @@ mod initialization;
 mod pam;
 mod pamsil;
 mod pammedsil;
-mod pammedsilnaive;
 #[cfg(feature = "parallel")]
 mod par_fasterpam;
 #[cfg(feature = "parallel")]
