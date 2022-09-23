@@ -21,11 +21,12 @@ an earlier (slower, and now obsolete) version was published as:
 
 This is a port of the original Java code from [ELKI](https://elki-project.github.io/) to Rust.
 
-For further details on the implemented algorithm FasterMSC, see:
+For further details on medoid Silhouette clustering with FasterMSC, see:
 
-> Lars Lenssen, Erich Schubert  
+> Lars Lenssen, Erich Schubert:  
 > **Clustering by Direct Optimization of the Medoid Silhouette**  
-> In: 15th International Conference on Similarity Search and Applications (SISAP 2022)
+> In: 15th International Conference on Similarity Search and Applications (SISAP 2022)  
+> <https://doi.org/10.1007/978-3-031-17849-8_15>
 
 If you use this code in scientific work, please cite above papers. Thank you.
 
@@ -55,7 +56,7 @@ For example for unsigned distances using `u32`, it may be better to use `i64` to
 * PAM (Kaufman and Rousseeuw, 1987) with BUILD and SWAP
 * Alternating optimization (k-means-style algorithm)
 * Silhouette index for evaluation (Rousseeuw, 1987)
-* FasterMSC (Lenssen and Schubert, 2022)
+* **FasterMSC** (Lenssen and Schubert, 2022)
 * FastMSC (Lenssen and Schubert, 2022)
 * PAMSIL (Van der Laan and Pollard, 2003)
 * PAMMEDSIL (Van der Laan and Pollard, 2003)
