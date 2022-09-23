@@ -46,8 +46,7 @@ where
 	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
 	M: ArrayAdapter<N>,
 {
-	let n = mat.len();
-	let k = med.len();
+	let (n, k) = (mat.len(), med.len());
 	if k == 1 {
 		let assi = vec![0; n];
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
@@ -55,7 +54,6 @@ where
 	}
 	let (mut loss, mut data) = initial_assignment(mat, med);
 	debug_assert_assignment(mat, med, &data);
-
 	let mut removal_loss = vec![L::zero(); k];
 	update_removal_loss(&data, &mut removal_loss);
 	let (mut lastswap, mut n_swaps, mut iter) = (n, 0, 0);

@@ -52,15 +52,17 @@ pub fn fastermsc<M, N, L>(
 ) -> (L, Vec<usize>, usize, usize)
 	where
 		N: Zero + PartialOrd + Copy + std::fmt::Display,
-		L: Float + Signed + AddAssign + From<N> + From<u32> + std::fmt::Display,
+		L: Float + Signed + AddAssign + From<N> + From<u32> + std::fmt::Display + std::fmt::Debug,
 		M: ArrayAdapter<N>,
 {
-	let n = mat.len();
-	let k = med.len();
+	let (n, k) = (mat.len(), med.len());
 	if k == 1 {
 		let assi = vec![0; n];
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
 		return (loss, assi, 1, if swapped { 1 } else { 0 });
+	}
+	if k == 2 { // special hadling, as there is no third
+		return fastermsc_k2(mat, med, maxiter);
 	}
 	let (mut loss, mut data):(L,_) = initial_assignment(mat, med);
 	debug_assert_assignment_th(mat, med, &data);
@@ -141,7 +143,7 @@ pub(crate) fn initial_assignment<M, N, L>(mat: &M, med: &[usize]) -> (L, Vec<Rec
 	(loss, data)
 }
 
-/// Find the best swap for object j - FasterMSC version
+/// Find the best swap for object j - FastMSC version
 #[inline]
 pub(crate) fn find_best_swap<M, N, L>(
 	mat: &M,
@@ -150,8 +152,8 @@ pub(crate) fn find_best_swap<M, N, L>(
 	j: usize,
 ) -> (L, usize)
 	where
-		N: Zero + PartialOrd + Copy + std::fmt::Display,
-		L: Float + AddAssign + From<N> + std::fmt::Display,
+		N: Zero + PartialOrd + Copy,
+		L: Float + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
 	let mut ploss = removal_loss.to_vec();
@@ -167,9 +169,13 @@ pub(crate) fn find_best_swap<M, N, L>(
 		} else if djo < reco.seco.d {
 			acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, djo);
 			ploss[reco.near.i as usize] += _loss::<N, L>(reco.near.d, djo) + _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.near.d + djo, reco.seco.d);
+			// loss already includes (dt - ds) - (ds - dn), adjust to 2*d(xo) - ds - dt
+			// loss already includes (dt - ds), adjust to 2*d(xo) - ds - dt
 			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, reco.seco.d);
 		} else if djo < reco.third.d {
+			// loss already includes (dt - ds) - (ds - dn), adjust to d(xo)- dt
 			ploss[reco.near.i as usize] += _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.seco.d, djo);
+			// loss already includes (dt - ds), adjust to d(xo)- dt
 			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, djo);
 		}
 	}
@@ -256,7 +262,7 @@ pub(crate) fn do_swap<M, N, L>(
 			if reco.near.i == b as u32 {
 				if djo < reco.seco.d {
 					reco.near = DistancePair::new(b as u32, djo);
-				} else if djo < reco.third.d{
+				} else if reco.third.i == u32::MAX || djo < reco.third.d {
 					reco.near = reco.seco;
 					reco.seco = DistancePair::new(b as u32, djo);
 				} else {
@@ -269,7 +275,7 @@ pub(crate) fn do_swap<M, N, L>(
 				if djo < reco.near.d {
 					reco.seco = reco.near;
 					reco.near = DistancePair::new(b as u32, djo);
-				} else if djo < reco.third.d {
+				} else if reco.third.i == u32::MAX || djo < reco.third.d {
 					reco.seco = DistancePair::new(b as u32, djo);
 				} else {
 					reco.seco = reco.third;
@@ -284,7 +290,7 @@ pub(crate) fn do_swap<M, N, L>(
 				} else if djo < reco.seco.d {
 					reco.third = reco.seco;
 					reco.seco = DistancePair::new(b as u32, djo);
-				} else if djo < reco.third.d {
+				} else if reco.third.i == u32::MAX || djo < reco.third.d {
 					reco.third = DistancePair::new(b as u32, djo);
 				} else if reco.third.i == b as u32 {
 					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, djo);
@@ -294,6 +300,171 @@ pub(crate) fn do_swap<M, N, L>(
 		})
 		.reduce(L::add)
 		.unwrap()
+}
+
+/// Special case k=2 of the FasterMSC algorithm.
+fn fastermsc_k2<M, N, L>(
+	mat: &M,
+	med: &mut Vec<usize>,
+	maxiter: usize,
+) -> (L, Vec<usize>, usize, usize)
+	where
+		N: Zero + PartialOrd + Copy + std::fmt::Display,
+		L: Float + Signed + AddAssign + From<N> + From<u32> + std::fmt::Display + std::fmt::Debug,
+		M: ArrayAdapter<N>,
+{
+	let (n, k) = (mat.len(), med.len());
+	assert!(k == 2, "Only valid for k=2");
+	let (mut loss, mut assi, mut data): (L,_,_) = initial_assignment_k2(mat, med);
+	println!("Loss: {:?}", loss);
+	let (mut lastswap, mut n_swaps, mut iter) = (n, 0, 0);
+	while iter < maxiter {
+		iter += 1;
+		let swaps_before = n_swaps;
+		for j in 0..n {
+			if j == lastswap {
+				break;
+			}
+			if j == med[assi[j] as usize] {
+				continue; // This already is a medoid
+			}
+			let (newloss, b): (L, _) = find_best_swap_k2(mat, &data, j); // assi not used, see below
+			if newloss <= loss {
+				continue; // No improvement
+			}
+			n_swaps += 1;
+			lastswap = j;
+			// perform the swap
+			let newloss = do_swap_k2(mat, med, &mut assi, &mut data, b, j);
+			if newloss <= loss {
+				break; // Probably numerically unstable now.
+			}
+			loss = newloss;
+		}
+		if n_swaps == swaps_before {
+			break; // converged
+		}
+	}
+	loss = loss / <L as From<u32>>::from(n as u32);
+	(loss, assi, iter, n_swaps)
+}
+/// Perform the initial assignment to medoids, for k=2 only
+#[inline]
+pub(crate) fn initial_assignment_k2<M, N, L>(mat: &M, med: &[usize]) -> (L, Vec<usize>, Vec<(N,N)>)
+	where
+		N: Zero + PartialOrd + Copy,
+		L: Float + AddAssign + From<N>,
+		M: ArrayAdapter<N>,
+{
+	let (n, k) = (mat.len(), med.len());
+	assert!(mat.is_square(), "Dissimilarity matrix is not square");
+	assert!(n <= u32::MAX as usize, "N is too large");
+	assert!(k == 2, "k must be 2");
+	let mut assi = vec![0 as usize; mat.len()];
+	let mut data = vec![(N::zero(), N::zero()); mat.len()];
+	let loss = assi.iter_mut().zip(data.iter_mut())
+		.enumerate()
+		.map(|(i, (a, d))| {
+			*d = (mat.get(i, med[0]), mat.get(i, med[1]));
+			if d.0 < d.1 {
+				*a = 0;
+				return L::one() - _loss::<N, L>(d.0, d.1);
+			} else {
+				*a = 1;
+				return L::one() - _loss::<N, L>(d.1, d.0);
+			}
+		})
+		.reduce(L::add)
+		.unwrap();
+	(loss, assi, data)
+}
+
+/// Find the best swap for object j - FastMSC version
+#[inline]
+pub(crate) fn find_best_swap_k2<M, N, L>(
+	mat: &M,
+	data: &[(N, N)],
+	j: usize,
+) -> (L, usize)
+	where
+		N: Zero + PartialOrd + Copy,
+		L: Float + AddAssign + From<N>,
+		M: ArrayAdapter<N>,
+{
+	let mut ploss = vec![L::zero(); 2];
+	for (o, d) in data.iter().enumerate() {
+		let djo = mat.get(j, o);
+		// We do not use the assignment here, because we stored d0/d1 by medoid position, not closeness
+		ploss[0] += if djo < d.1 { L::one() - _loss(djo, d.1) } else { L::one() - _loss(d.1, djo) };
+		ploss[1] += if djo < d.0 { L::one() - _loss(djo, d.0) } else { L::one() - _loss(d.0, djo) };
+	}
+	let (b, bloss) = find_max(&mut ploss.iter());
+	(bloss, b)
+}
+
+/// Perform a single swap
+#[inline]
+pub(crate) fn do_swap_k2<M, N, L>(
+	mat: &M,
+	med: &mut Vec<usize>,
+	assi: &mut Vec<usize>,
+	data: &mut Vec<(N, N)>,
+	b: usize,
+	j: usize,
+) -> L
+	where
+		N: Zero + PartialOrd + Copy,
+		L: Float + Signed + AddAssign + From<N>,
+		M: ArrayAdapter<N>,
+{
+	let n = mat.len();
+	assert!(b < med.len(), "invalid medoid number");
+	assert!(j < n, "invalid object number");
+	med[b] = j;
+	// Its nicer to have the if outside, even though this looks duplicated
+	if b == 0 {
+		return assi.iter_mut().zip(data.iter_mut())
+			.enumerate()
+			.map(|(o, (a, d))| {
+				if o == j {
+					*a = 0;
+					d.0 = N::zero();
+					return L::one();
+				}
+				let djo = mat.get(j, o);
+				d.0 = djo;
+				if djo < d.1 || (djo == d.1 && *a == 0) {
+					*a = 0;
+					return L::one() - _loss::<N, L>(djo, d.1);
+				} else {
+					*a = 1;
+					return L::one() - _loss::<N, L>(d.1, djo);
+				}
+			})
+			.reduce(L::add)
+			.unwrap();
+	} else { // b == 1
+		return assi.iter_mut().zip(data.iter_mut())
+			.enumerate()
+			.map(|(o, (a, d))| {
+				if o == j {
+					*a = 1;
+					d.1 = N::zero();
+					return L::one();
+				}
+				let djo = mat.get(j, o);
+				d.1 = djo;
+				if djo < d.0 || (djo == d.0 && *a == 1) {
+					*a = 1;
+					return L::one() - _loss::<N, L>(djo, d.0);
+				} else {
+					*a = 0;
+					return L::one() - _loss::<N, L>(d.0, djo);
+				}
+			})
+			.reduce(L::add)
+			.unwrap();
+	}
 }
 
 #[cfg(test)]
@@ -310,12 +481,30 @@ mod tests {
 		let mut meds = vec![0, 1, 2];
 		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = fastermsc(&data, &mut meds, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
-		print!("Faster: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
+		print!("FasterMSC: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
 		assert_eq!(loss, 0.9047619047619048, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 2, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3, 2], "medoids not as expected");
 		assert_eq!(sil, 0.8773115773115773, "Silhouette not as expected");
+	}
+
+	#[test]
+	fn testfastermsc_simple2() {
+		let data = LowerTriangle {
+			n: 5,
+			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
+		};
+		let mut meds = vec![0, 1];
+		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = fastermsc(&data, &mut meds, 10);
+		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		print!("FasterMSC: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
+		assert_eq!(loss, 0.8805555555555555, "loss not as expected");
+		assert_eq!(n_swap, 3, "swaps not as expected");
+		assert_eq!(n_iter, 2, "iterations not as expected");
+		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
+		assert_array(meds, vec![0, 4], "medoids not as expected");
+		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
 	}
 }

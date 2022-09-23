@@ -1,5 +1,5 @@
 use crate::arrayadapter::ArrayAdapter;
-use crate::fastmsc::{do_swap, initial_assignment};
+use crate::fastermsc::{do_swap, initial_assignment};
 use crate::util::*;
 use core::ops::AddAssign;
 use num_traits::{Signed, Zero, Float};
@@ -134,12 +134,11 @@ fn pammedsil_optimize<M, N, L>(
 			if j == med[data[j].near.i as usize] {
 				continue; // This already is a medoid
 			}
-			let (mut change, mut b) = (L::zero(), 0);
-			if k == 2 {
-				(change, b) = find_best_swap_pammedsil_k2(mat, med, data, j);
+			let (change, b): (L, usize) = if k == 2 {
+				find_best_swap_pammedsil_k2(mat, med, data, j)
 			} else {
-				(change, b) = find_best_swap_pammedsil(mat, med, data, j);
-			}
+				find_best_swap_pammedsil(mat, med, data, j)
+			};
 			if change <= best.0 {
 				continue; // No improvement
 			}
@@ -376,5 +375,23 @@ mod tests {
 		assert_array(assi, vec![0, 0, 2, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3, 2], "medoids not as expected");
 		assert_eq!(sil, 0.8773115773115773, "Silhouette not as expected");
+	}
+
+	#[test]
+	fn testpammedsil_simple2() {
+		let data = LowerTriangle {
+			n: 5,
+			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
+		};
+		let mut meds = vec![0, 1];
+		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = pammedsil_swap(&data, &mut meds, 10);
+		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		println!("PAMMedSil: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
+		assert_eq!(loss, 0.8805555555555555, "loss not as expected");
+		assert_eq!(n_swap, 1, "swaps not as expected");
+		assert_eq!(n_iter, 2, "iterations not as expected");
+		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");
+		assert_array(meds, vec![0, 4], "medoids not as expected");
+		assert_eq!(sil, 0.7522494172494172, "Silhouette not as expected");
 	}
 }

@@ -71,7 +71,6 @@ impl<N: Zero> Reco<N> {
 	}
 }
 
-
 /// Find the minimum (index and value)
 #[inline]
 pub(crate) fn find_min<'a, L: 'a, I: 'a>(a: &mut I) -> (usize, L)
