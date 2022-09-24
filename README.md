@@ -3,6 +3,13 @@
 This Rust crate implements k-medoids clustering with PAM and variants of clustering by direct optimization of the (Medoid) Silhouette.
 It can be used with arbitrary dissimilarites, as it requires a dissimilarity matrix as input.
 
+This software package has been introduced in JOSS:
+
+> Erich Schubert and Lars Lenssen  
+> **Fast k-medoids Clustering in Rust and Python**  
+> Journal of Open Source Software 7(75), 4183  
+> <https://doi.org/10.21105/joss.04183> (open access)
+
 For further details on the implemented algorithm FasterPAM, see:
 
 > Erich Schubert, Peter J. Rousseeuw  
