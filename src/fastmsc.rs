@@ -148,7 +148,7 @@ fn fastmsc_k2<M, N, L>(
 #[cfg(test)]
 mod tests {
 	// TODO: use a larger, much more interesting example.
-	use crate::{arrayadapter::LowerTriangle, fastmsc, silhouette, util::assert_array};
+	use crate::{arrayadapter::LowerTriangle, fastmsc, silhouette, medoid_silhouette, util::assert_array};
 
 	#[test]
 	fn testfastpammedsil_simple() {
@@ -159,8 +159,10 @@ mod tests {
 		let mut meds = vec![0, 1, 2];
 		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = fastmsc(&data, &mut meds, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		let (msil, _): (f64, _) = medoid_silhouette(&data, &meds, false);
 		print!("FastMSC: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
 		assert_eq!(loss, 0.9047619047619048, "loss not as expected");
+		assert_eq!(msil, 0.9047619047619048, "Medoid Silhouette not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 2, 1, 1], "assignment not as expected");
@@ -177,8 +179,10 @@ mod tests {
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = fastmsc(&data, &mut meds, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		let (msil, _): (f64, _) = medoid_silhouette(&data, &meds, false);
 		print!("FastMSC: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
 		assert_eq!(loss, 0.8805555555555555, "loss not as expected");
+		assert_eq!(msil, 0.8805555555555555, "Medoid Silhouette not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");

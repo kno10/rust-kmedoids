@@ -339,7 +339,7 @@ fn pammedsil_build_initialize<M, N, L>(
 mod tests {
 	// TODO: use a larger, much more interesting example.
 	use crate::{
-		arrayadapter::LowerTriangle, pammedsil, pammedsil_swap, silhouette, util::assert_array,
+		arrayadapter::LowerTriangle, pammedsil, pammedsil_swap, silhouette, medoid_silhouette, util::assert_array,
 	};
 
 	#[test]
@@ -350,10 +350,12 @@ mod tests {
 		};
 		let (loss, assi, meds, n_iter, n_swap): (f64, _, _, _, _) = pammedsil(&data, 3, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		let (msil, _): (f64, _) = medoid_silhouette(&data, &meds, false);
 		println!("PAMMedSil: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
 		assert_eq!(n_swap, 0, "swaps not as expected");
 		assert_eq!(n_iter, 1, "iterations not as expected");
 		assert_eq!(loss, 0.9047619047619048, "loss not as expected");
+		assert_eq!(msil, 0.9047619047619048, "Medoid Silhouettte not as expected");
 		assert_array(assi, vec![0, 0, 2, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3, 2], "medoids not as expected");
 		assert_eq!(sil, 0.8773115773115773, "Silhouette not as expected");
@@ -368,8 +370,10 @@ mod tests {
 		let mut meds = vec![0, 1, 2];
 		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = pammedsil_swap(&data, &mut meds, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		let (msil, _): (f64, _) = medoid_silhouette(&data, &meds, false);
 		println!("PAMMedSil: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
 		assert_eq!(loss, 0.9047619047619048, "loss not as expected");
+		assert_eq!(msil, 0.9047619047619048, "Medoid Silhouette not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 2, 1, 1], "assignment not as expected");
@@ -386,8 +390,10 @@ mod tests {
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = pammedsil_swap(&data, &mut meds, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		let (msil, _): (f64, _) = medoid_silhouette(&data, &meds, false);
 		println!("PAMMedSil: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
 		assert_eq!(loss, 0.8805555555555555, "loss not as expected");
+		assert_eq!(msil, 0.8805555555555555, "Medoid Silhouette not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 0, 1, 1], "assignment not as expected");

@@ -1,8 +1,10 @@
 # Changelog
 
-## kmedoids 0.4.0 (2022-09-23)
+## kmedoids 0.4.0 (2022-09-24)
 
-- add clustering by optimizing the Silhouette: PAMSIL, PAMMEDSIL, FastMSC, FasterMSC
+- add clustering by optimizing the Silhouette: PAMSIL
+- add medoid silhouette
+- add medoid silhouette clustering: PAMMEDSIL, FastMSC, FasterMSC
 
 ## kmedoids 0.3.3 (2022-07-06)
 
