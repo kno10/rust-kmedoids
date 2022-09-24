@@ -1,5 +1,10 @@
 # Changelog
 
+## kmedoids 0.4.1 (2022-09-24)
+
+- drop a leftover println, remove Display/Debug traits
+- optimize marginally the MSC loss function computation
+
 ## kmedoids 0.4.0 (2022-09-24)
 
 - add clustering by optimizing the Silhouette: PAMSIL

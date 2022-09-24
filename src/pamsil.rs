@@ -41,7 +41,7 @@ pub fn pamsil_swap<M, N, L>(
 ) -> (L, Vec<usize>, usize, usize)
 	where
 		N: Zero + PartialOrd + Copy,
-		L: Float + Signed + AddAssign + From<N> + From<u32> + std::fmt::Display,
+		L: Float + Signed + AddAssign + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -82,7 +82,7 @@ pub fn pamsil_swap<M, N, L>(
 pub fn pamsil<M, N, L>(mat: &M, k: usize, maxiter: usize) -> (L, Vec<usize>, Vec<usize>, usize, usize)
 	where
 		N: Zero + PartialOrd + Copy,
-		L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + From<u32> + std::fmt::Display,
+		L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -106,7 +106,7 @@ fn pamsil_optimize<M, N, L>(
 ) -> (L, usize, usize)
 	where
 		N: Zero + PartialOrd + Copy,
-		L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + From<u32> + std::fmt::Display,
+		L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
 	let (n, k) = (mat.len(), med.len());

@@ -53,7 +53,7 @@ pub fn pammedsil_swap<M, N, L>(
 ) -> (L, Vec<usize>, usize, usize)
 	where
 		N: Zero + PartialOrd + Copy,
-		L: Float + Signed + AddAssign + From<N> + std::fmt::Display + std::convert::From<u32>,
+		L: Float + Signed + AddAssign + From<N> + std::convert::From<u32>,
 		M: ArrayAdapter<N>,
 {
 	let (loss, mut data) = initial_assignment(mat, med);
@@ -91,7 +91,7 @@ pub fn pammedsil_swap<M, N, L>(
 pub fn pammedsil<M, N, L>(mat: &M, k: usize, maxiter: usize) -> (L, Vec<usize>, Vec<usize>, usize, usize)
 	where
 		N: Zero + PartialOrd + Copy,
-		L: Float + Signed + AddAssign + From<N> + std::fmt::Display + std::convert::From<u32>,
+		L: Float + Signed + AddAssign + From<N> + std::convert::From<u32>,
 		M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -116,7 +116,7 @@ fn pammedsil_optimize<M, N, L>(
 ) -> (L, Vec<usize>, usize, usize)
 	where
 		N: Zero + PartialOrd + Copy,
-		L: Float + Signed + AddAssign + From<N> + std::fmt::Display + std::convert::From<u32>,
+		L: Float + Signed + AddAssign + From<N> + std::convert::From<u32>,
 		M: ArrayAdapter<N>,
 {
 	let (n, k) = (mat.len(), med.len());
@@ -148,7 +148,7 @@ fn pammedsil_optimize<M, N, L>(
 			n_swaps += 1;
 			// perform the swap
 			let newloss : L = do_swap(mat, med, data, best.1, best.2);
-			if newloss <= loss {
+			if newloss >= loss {
 				break; // Probably numerically unstable now.
 			}
 			loss = newloss;
@@ -157,7 +157,7 @@ fn pammedsil_optimize<M, N, L>(
 		}
 	}
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
-	loss = loss / <L as From<u32>>::from(n as u32);
+	loss = L::one() - loss / <L as From<u32>>::from(n as u32);
 	(loss, assi, iter, n_swaps)
 }
 
@@ -166,7 +166,7 @@ fn pammedsil_optimize<M, N, L>(
 fn find_best_swap_pammedsil<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>], j: usize) -> (L, usize)
 	where
 		N: Zero + PartialOrd + Copy,
-		L: Float + AddAssign + From<N> + std::fmt::Display,
+		L: Float + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
 	let recj = &data[j];
@@ -217,7 +217,7 @@ fn find_best_swap_pammedsil<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>], j
 fn find_best_swap_pammedsil_k2<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>], j: usize) -> (L, usize)
 	where
 		N: Zero + PartialOrd + Copy,
-		L: Float + AddAssign + From<N> + std::fmt::Display,
+		L: Float + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
 	let recj = &data[j];
@@ -268,7 +268,7 @@ fn pammedsil_build_initialize<M, N, L>(
 ) -> L
 	where
 		N: Zero + PartialOrd + Copy,
-		L: Float + Signed + AddAssign + From<N> + std::fmt::Display,
+		L: Float + Signed + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -328,7 +328,7 @@ fn pammedsil_build_initialize<M, N, L>(
 					recj.third = DistancePair::new(l as u32, dj);
 				}
 			}
-			loss += L::one() - _loss::<N, L>(recj.near.d, recj.seco.d);
+			loss += _loss::<N, L>(recj.near.d, recj.seco.d);
 		}
 		meds.push(best.1);
 	}

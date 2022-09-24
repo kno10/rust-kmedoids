@@ -6,15 +6,6 @@ use core::ops::AddAssign;
 use num_traits::{Signed, Zero, Float};
 use std::convert::From;
 
-#[inline]
-fn _loss<N, L>(a: N, b: N) -> L
-	where
-		N: Zero + Copy,
-		L: Float + From<N>,
-{
-	if N::is_zero(&a) || N::is_zero(&b) { L::zero() } else { <L as From<N>>::from(a) / <L as From<N>>::from(b) } 
-}
-
 /// Run the FastMSC algorithm, which yields the same results as the original PAMMEDSIL.
 ///
 /// This is faster than PAMMEDSIL, but slower than FasterMSC, and mostly of interest for academic reasons.
@@ -91,7 +82,7 @@ pub fn fastmsc<M, N, L>(
 			n_swaps += 1;
 			// perform the swap
 			let newloss = do_swap(mat, med, &mut data, best.1, best.2);
-			if newloss <= loss {
+			if newloss >= loss {
 				break; // Probably numerically unstable now.
 			}
 			loss = newloss;
@@ -100,7 +91,7 @@ pub fn fastmsc<M, N, L>(
 		}
 	}
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
-	loss = loss / <L as From<u32>>::from(n as u32);
+	loss = L::one() - loss / <L as From<u32>>::from(n as u32);
 	(loss, assi, iter, n_swaps)
 }
 /// Special case k=2 of the FasterMSC algorithm.
@@ -126,22 +117,22 @@ fn fastmsc_k2<M, N, L>(
 				continue; // This already is a medoid
 			}
 			let (newloss, b): (L, _) = find_best_swap_k2(mat, &data, j); // assi not used, see below
-			if newloss > best.0 {
+			if best.2 == usize::MAX || newloss < best.0 {
 				best = (newloss, b, j);
 			}
 		}
-		if !(best.0 > loss) {
+		if !(best.0 < loss) {
 			break; // No improvement
 		}
 		// perform the swap
 		n_swaps += 1;
 		let newloss = do_swap_k2(mat, med, &mut assi, &mut data, best.1, best.2);
-		if newloss <= loss {
+		if !(newloss < loss) {
 			break; // Probably numerically unstable now.
 		}
 		loss = newloss;
 	}
-	loss = loss / <L as From<u32>>::from(n as u32);
+	loss = L::one() - loss / <L as From<u32>>::from(n as u32);
 	(loss, assi, iter, n_swaps)
 }
 

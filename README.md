@@ -107,9 +107,3 @@ If you need help, please submit an [issue](https://github.com/kno10/rust-kmedoid
 > 
 > You should have received a copy of the GNU General Public License
 > along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-## FAQ: Why GPL and not Apache/MIT/BSD?
-
-Because copyleft software like Linux is what built the open-source community.
-
-Tit for tat: you get to use my code, I get to use your code.
