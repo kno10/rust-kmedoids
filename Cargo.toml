@@ -31,7 +31,7 @@ required-features = ["ndarray", "rand", "parallel"]
 num-traits = "0.2"
 ndarray = {version = "0.15", optional = true}
 rand  = {version = "0.8", optional = true}
-rayon = {version = "1.5", optional = true}
+rayon = {version = "1.7", optional = true}
 
 [dev-dependencies]
 ndarray = "0.15"
