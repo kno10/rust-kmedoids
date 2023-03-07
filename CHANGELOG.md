@@ -1,5 +1,10 @@
 # Changelog
 
+## kmedoids 0.4.2 (2023-03-07)
+
+- no changes in rust, fix predict in Python wrapper
+- add CITATION.cff
+
 ## kmedoids 0.4.1 (2022-09-24)
 
 - drop a leftover println, remove Display/Debug traits
