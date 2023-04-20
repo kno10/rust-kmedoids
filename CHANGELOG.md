@@ -1,5 +1,9 @@
 # Changelog
 
+## kmedoids 0.4.3 (2023-04-20)
+
+- fix bug in silhouette evaluation for k > 2
+
 ## kmedoids 0.4.2 (2023-03-07)
 
 - bumped rayon to 1.7, with no changes

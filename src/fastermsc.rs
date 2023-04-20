@@ -488,7 +488,7 @@ mod tests {
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![0, 0, 2, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![0, 3, 2], "medoids not as expected");
-		assert_eq!(sil, 0.8773115773115773, "Silhouette not as expected");
+		assert_eq!(sil, 0.5622222222222222, "Silhouette not as expected");
 	}
 
 	#[test]

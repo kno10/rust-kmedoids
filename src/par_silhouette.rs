@@ -13,8 +13,8 @@ use std::convert::From;
 /// to be closer to all members of its own cluster than to members of other clusters.
 ///
 /// Because of the additional requirement of a division operator, this implementation
-/// currently always returns a f64 result, and accepts only input distances that can be
-/// converted into f64.
+/// currently always returns a float result, and accepts only input distances that can be
+/// converted into floats.
 ///
 /// * type `M` - matrix data type such as `ndarray::Array2` or `kmedoids::arrayadapter::LowerTriangle`
 /// * type `N` - number data type such as `u32` or `f64`
@@ -72,16 +72,20 @@ where
 					buf[aj].1 += mat.get(i, j).into();
 				}
 			}
-			let a = checked_div(buf[ai].1, buf[ai].0.into());
-			let mut tmp = buf
-				.iter()
-				.enumerate()
-				.filter(|&(i, _)| i != ai)
-				.map(|(_, p)| checked_div(p.1, p.0.into()));
-			// Ugly hack to get the min():
-			let tmp2 = tmp.next().unwrap_or_else(L::zero);
-			let b = tmp.fold(tmp2, |x, y| if y < x { x } else { y });
-			checked_div(b - a, if a > b { a } else { b }) // return value
+			if buf[ai].0 > 0 {
+				let a = checked_div(buf[ai].1, buf[ai].0.into());
+				let mut tmp = buf
+					.iter()
+					.enumerate()
+					.filter(|&(i, _)| i != ai)
+					.map(|(_, p)| checked_div(p.1, p.0.into()));
+				// Ugly hack to get the min():
+				let tmp2 = tmp.next().unwrap_or_else(L::zero);
+				let b = tmp.fold(tmp2, |x, y| if y < x { y } else { x });
+				checked_div(b - a, if a > b { a } else { b }) // return value
+			} else {
+				L::zero() // singleton
+			}
 		})
 		.collect::<Vec<L>>()
 		.iter()

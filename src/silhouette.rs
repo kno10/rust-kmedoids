@@ -73,16 +73,20 @@ where
 		if buf.len() == 1 {
 			return (L::zero(), sil);
 		}
-		let a = checked_div(buf[ai].1, buf[ai].0.into());
-		let mut tmp = buf
-			.iter()
-			.enumerate()
-			.filter(|&(i, _)| i != ai)
-			.map(|(_, p)| checked_div(p.1, p.0.into()));
-		// Ugly hack to get the min():
-		let tmp2 = tmp.next().unwrap_or_else(L::zero);
-		let b = tmp.fold(tmp2, |x, y| if y < x { x } else { y });
-		let s = checked_div(b - a, if a > b { a } else { b });
+		let s = if buf[ai].0 > 0 {
+			let a = checked_div(buf[ai].1, buf[ai].0.into());
+			let mut tmp = buf
+				.iter()
+				.enumerate()
+				.filter(|&(i, _)| i != ai)
+				.map(|(_, p)| checked_div(p.1, p.0.into()));
+			// Ugly hack to get the min():
+			let tmp2 = tmp.next().unwrap_or_else(L::zero);
+			let b = tmp.fold(tmp2, |x, y| if y < x { y } else { x });
+			checked_div(b - a, if a > b { a } else { b })
+		} else {
+			L::zero() // singleton
+		};
 		if samples {
 			sil[i] = s;
 		}

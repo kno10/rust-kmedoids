@@ -250,10 +250,10 @@ mod tests {
 		print!("PAMSil k=3: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
-		assert_eq!(loss, 0.8773115773115773, "loss not as expected");
+		assert_eq!(loss, 0.5622222222222222, "loss not as expected");
 		assert_array(assi, vec![0, 0, 2, 1, 1], "assignment not as expected");
 		assert_array(meds, vec![1, 3, 2], "medoids not as expected");
-		assert_eq!(sil, 0.8773115773115773, "Silhouette not as expected");
+		assert_eq!(sil, 0.5622222222222222, "Silhouette not as expected");
 	}
 
 	#[test]
@@ -266,11 +266,11 @@ mod tests {
 		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = pamsil_swap(&data, &mut meds, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		print!("Fast: {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, sil, assi, meds);
-		assert_eq!(loss, 0.8773115773115773, "loss not as expected");
+		assert_eq!(loss, 0.5622222222222222, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
 		assert_eq!(n_iter, 2, "iterations not as expected");
 		assert_array(assi, vec![1, 1, 2, 0, 0], "assignment not as expected");
 		assert_array(meds, vec![3, 1, 2], "medoids not as expected");
-		assert_eq!(sil, 0.8773115773115773, "Silhouette not as expected");
+		assert_eq!(sil, 0.5622222222222222, "Silhouette not as expected");
 	}
 }
