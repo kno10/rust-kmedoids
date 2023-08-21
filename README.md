@@ -28,7 +28,14 @@ an earlier (slower, and now obsolete) version was published as:
 
 This is a port of the original Java code from [ELKI](https://elki-project.github.io/) to Rust.
 
-For further details on medoid Silhouette clustering with FasterMSC, see:
+For further details on medoid Silhouette clustering with automatic cluster number selection (FasterMSC, DynMSC), see:
+
+> Lars Lenssen, Erich Schubert:  
+> **Medoid silhouette clustering with automatic cluster number selection**   
+> Information Systems (?), 2023, ? 
+> ? (open access)
+
+an earlier version was published as:
 
 > Lars Lenssen, Erich Schubert:  
 > **Clustering by Direct Optimization of the Medoid Silhouette**  
@@ -65,6 +72,7 @@ For example for unsigned distances using `u32`, it may be better to use `i64` to
 * Silhouette index for evaluation (Rousseeuw, 1987)
 * **FasterMSC** (Lenssen and Schubert, 2022)
 * FastMSC (Lenssen and Schubert, 2022)
+* DynMSC (Lenssen and Schubert, 2023)
 * PAMSIL (Van der Laan and Pollard, 2003)
 * PAMMEDSIL (Van der Laan and Pollard, 2003)
 
