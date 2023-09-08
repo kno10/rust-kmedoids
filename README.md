@@ -31,9 +31,8 @@ This is a port of the original Java code from [ELKI](https://elki-project.github
 For further details on medoid Silhouette clustering with automatic cluster number selection (FasterMSC, DynMSC), see:
 
 > Lars Lenssen, Erich Schubert:  
-> **Medoid silhouette clustering with automatic cluster number selection**   
-> Information Systems (?), 2023, ? 
-> ? (open access)
+> **Medoid silhouette clustering with automatic cluster number selection** 
+> Preprint: <https://arxiv.org/abs/2309.03751>
 
 an earlier version was published as:
 
