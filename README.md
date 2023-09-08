@@ -31,11 +31,12 @@ This is a port of the original Java code from [ELKI](https://elki-project.github
 For further details on medoid Silhouette clustering with automatic cluster number selection (FasterMSC, DynMSC), see:
 
 > Lars Lenssen, Erich Schubert:  
-> **Medoid silhouette clustering with automatic cluster number selection**   
-> Information Systems (?), 2023, ? 
-> ? (open access)
+> **Medoid silhouette clustering with automatic cluster number selection**  
+> Information Systems (120), 2024, 102290  
+> <https://doi.org/10.1016/j.is.2023.102290>  
+> Preprint: <https://arxiv.org/abs/2309.03751>
 
-an earlier version was published as:
+the basic FasterMSC method was first published as:
 
 > Lars Lenssen, Erich Schubert:  
 > **Clustering by Direct Optimization of the Medoid Silhouette**  
@@ -72,7 +73,7 @@ For example for unsigned distances using `u32`, it may be better to use `i64` to
 * Silhouette index for evaluation (Rousseeuw, 1987)
 * **FasterMSC** (Lenssen and Schubert, 2022)
 * FastMSC (Lenssen and Schubert, 2022)
-* DynMSC (Lenssen and Schubert, 2023)
+* **DynMSC** (Lenssen and Schubert, 2023)
 * PAMSIL (Van der Laan and Pollard, 2003)
 * PAMMEDSIL (Van der Laan and Pollard, 2003)
 
