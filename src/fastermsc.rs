@@ -303,7 +303,8 @@ pub(crate) fn do_swap<M, N, L>(
 }
 
 /// Special case k=2 of the FasterMSC algorithm.
-fn fastermsc_k2<M, N, L>(
+#[inline]
+pub(crate) fn fastermsc_k2<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
 	maxiter: usize,
