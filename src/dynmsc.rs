@@ -53,7 +53,7 @@ pub fn dynmsc<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
 	maxiter: usize,
-) -> (L, Vec<usize>, usize, usize, Vec<L>)
+) -> (L, Vec<usize>, usize, usize, Vec<usize>, Vec<L>)
 	where
 		N: Zero + PartialOrd + Copy,
 		L: Float + Signed + AddAssign + From<N> + From<u32> + std::fmt::Debug,
@@ -65,18 +65,20 @@ pub fn dynmsc<M, N, L>(
 		let assi = vec![0; n];
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
 		return_loss[0] = loss;
-		return (loss, assi, 1, if swapped { 1 } else { 0 }, return_loss);
+		let mut return_meds = med.clone();
+		return (loss, assi, 1, if swapped { 1 } else { 0 }, return_meds, return_loss);
 	}
 	let (mut loss, mut data): (L, _) = initial_assignment(mat, med);
 	debug_assert_assignment_th(mat, med, &data);
 
-	let mut return_loss = vec![L::zero(); k - 2];
+	let mut return_loss = vec![L::zero(); k - 1];
 	let mut best_loss = L::zero();
 	let mut return_assi = vec![0, n];
 	let mut return_iter = 0;
 	let mut return_swaps = 0;
 	let (mut lastswap, mut n_swaps, mut iter);
 	let mut removal_loss = vec![L::zero(); k];
+	let mut return_meds = med.clone();
 	while k >= 3 {
 		update_removal_loss(&data, &mut removal_loss);
 		lastswap = n;
@@ -122,6 +124,7 @@ pub fn dynmsc<M, N, L>(
 		if loss > best_loss {
 			best_loss = loss;
 			return_assi = assi;
+			return_meds = med.clone();
 		}
 		return_swaps = return_swaps + n_swaps;
 		return_iter = return_iter + iter;
@@ -131,12 +134,13 @@ pub fn dynmsc<M, N, L>(
 	}
 	let (loss2, assi2, iter2, n_swaps2): (L, _, _, _) = fastermsc_k2(mat, med, maxiter);
 	return_loss[0] = loss2;
-	if loss > best_loss {
+	if loss2 > best_loss {
+		return_meds = med.clone();
 		return_assi = assi2;
 	}
 	return_swaps = return_swaps + n_swaps2;
 	return_iter = return_iter + iter2;
-	(best_loss, return_assi, return_iter, return_swaps, return_loss)
+	(best_loss, return_assi, return_iter, return_swaps, return_meds, return_loss)
 }
 
 /// Update the third nearest medoid information
@@ -242,12 +246,12 @@ mod tests {
 	fn testdynmsc_simple() {
 		let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 		let mut meds = random_initialization(4, 3, &mut rand::thread_rng());
-		let (loss, assi, n_iter, n_swap, losses): (f64, _, _, _, _) = dynmsc(&data, &mut meds, 100);
+		let (loss, assi, n_iter, n_swap, best_meds, losses): (f64, _, _, _, _, _) = dynmsc(&data, &mut meds, 100);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
-		let (msil, _): (f64, _) = medoid_silhouette(&data, &meds, false);
-		print!("DynMSC: {:?} {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, msil, sil, assi, meds);
-		assert_eq!(loss, 0.8666666666666667, "loss not as expected");
-		assert_eq!(msil, 0.8666666666666667, "Medoid Silhouette not as expected");
-		assert_eq!(meds.len(), 2, "Best k not as expected");
+		let (msil, _): (f64, _) = medoid_silhouette(&data, &best_meds, false);
+		print!("DynMSC: {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, msil, sil, assi, best_meds, losses);
+		assert_eq!(loss, 0.9375, "loss not as expected");
+		assert_eq!(msil, 0.9375, "Medoid Silhouette not as expected");
+		assert_eq!(best_meds.len(), 3, "Best k not as expected");
 	}
 }
