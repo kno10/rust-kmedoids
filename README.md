@@ -32,7 +32,8 @@ For further details on medoid Silhouette clustering with automatic cluster numbe
 
 > Lars Lenssen, Erich Schubert:  
 > **Medoid silhouette clustering with automatic cluster number selection** 
-> Preprint: <https://arxiv.org/abs/2309.03751>
+> Information Systems (120), 2024, 102290
+> <https://doi.org/10.1016/j.is.2023.102290>
 
 an earlier version was published as:
 

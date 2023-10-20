@@ -53,7 +53,7 @@ pub fn dynmsc<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
 	maxiter: usize,
-) -> (L, Vec<usize>, usize, usize)
+) -> (L, Vec<usize>, usize, usize, Vec<L>)
 	where
 		N: Zero + PartialOrd + Copy,
 		L: Float + Signed + AddAssign + From<N> + From<u32> + std::fmt::Debug,
@@ -61,14 +61,17 @@ pub fn dynmsc<M, N, L>(
 {
 	let (n, mut k) = (mat.len(), med.len());
 	if k == 1 {
+		let mut return_loss = vec![L::zero(); 1 as usize];
 		let assi = vec![0; n];
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
-		return (loss, assi, 1, if swapped { 1 } else { 0 });
+		return_loss[0] = loss;
+		return (loss, assi, 1, if swapped { 1 } else { 0 }, return_loss);
 	}
 	let (mut loss, mut data): (L, _) = initial_assignment(mat, med);
 	debug_assert_assignment_th(mat, med, &data);
 
-	let mut return_loss = L::zero();
+	let mut return_loss = vec![L::zero(); k - 2];
+	let mut best_loss = L::zero();
 	let mut return_assi = vec![0, n];
 	let mut return_iter = 0;
 	let mut return_swaps = 0;
@@ -114,9 +117,10 @@ pub fn dynmsc<M, N, L>(
 			}
 		}
 		loss = L::one() - loss / <L as From<u32>>::from(n as u32);
+		return_loss[k - 2] = loss;
 		let assi = data.iter().map(|x| x.near.i as usize).collect();
-		if loss > return_loss {
-			return_loss = loss;
+		if loss > best_loss {
+			best_loss = loss;
 			return_assi = assi;
 		}
 		return_swaps = return_swaps + n_swaps;
@@ -126,13 +130,13 @@ pub fn dynmsc<M, N, L>(
 		k = med.len();
 	}
 	let (loss2, assi2, iter2, n_swaps2): (L, _, _, _) = fastermsc_k2(mat, med, maxiter);
-	if loss > return_loss {
-		return_loss = loss2;
+	return_loss[0] = loss2;
+	if loss > best_loss {
 		return_assi = assi2;
 	}
 	return_swaps = return_swaps + n_swaps2;
 	return_iter = return_iter + iter2;
-	(return_loss, return_assi, return_iter, return_swaps)
+	(best_loss, return_assi, return_iter, return_swaps, return_loss)
 }
 
 /// Update the third nearest medoid information
@@ -238,7 +242,7 @@ mod tests {
 	fn testdynmsc_simple() {
 		let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 		let mut meds = random_initialization(4, 3, &mut rand::thread_rng());
-		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = dynmsc(&data, &mut meds, 100);
+		let (loss, assi, n_iter, n_swap, losses): (f64, _, _, _, _) = dynmsc(&data, &mut meds, 100);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		let (msil, _): (f64, _) = medoid_silhouette(&data, &meds, false);
 		print!("DynMSC: {:?} {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, msil, sil, assi, meds);
