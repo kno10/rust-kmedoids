@@ -1,5 +1,10 @@
 # Changelog
 
+## kmedoids 0.4.x (2023-12-xx)
+
+- move the check for numerical instability out of the loop
+  in all the "faster" variants, as we do no longer do best-first
+
 ## kmedoids 0.4.3 (2023-04-20)
 
 - fix bug in silhouette evaluation for k > 2

@@ -72,7 +72,7 @@ pub fn fastermsc<M, N, L>(
 	let (mut lastswap, mut n_swaps, mut iter) = (n, 0, 0);
 	while iter < maxiter {
 		iter += 1;
-		let swaps_before = n_swaps;
+		let (swaps_before, lastloss) = (n_swaps, loss);
 		for j in 0..n {
 			if j == lastswap {
 				break;
@@ -87,14 +87,10 @@ pub fn fastermsc<M, N, L>(
 			n_swaps += 1;
 			lastswap = j;
 			// perform the swap
-			let newloss = do_swap(mat, med, &mut data, b, j);
-			if newloss >= loss {
-				break; // Probably numerically unstable now.
-			}
-			loss = newloss;
+			loss = do_swap(mat, med, &mut data, b, j);
 			update_removal_loss(&data, &mut removal_loss);
 		}
-		if n_swaps == swaps_before {
+		if n_swaps == swaps_before || loss >= lastloss {
 			break; // converged
 		}
 	}
@@ -319,7 +315,7 @@ fn fastermsc_k2<M, N, L>(
 	let (mut lastswap, mut n_swaps, mut iter) = (n, 0, 0);
 	while iter < maxiter {
 		iter += 1;
-		let swaps_before = n_swaps;
+		let (swaps_before, lastloss) = (n_swaps, loss);
 		for j in 0..n {
 			if j == lastswap {
 				break;
@@ -334,13 +330,9 @@ fn fastermsc_k2<M, N, L>(
 			n_swaps += 1;
 			lastswap = j;
 			// perform the swap
-			let newloss = do_swap_k2(mat, med, &mut assi, &mut data, b, j);
-			if newloss >= loss {
-				break; // Probably numerically unstable now.
-			}
-			loss = newloss;
+			loss = do_swap_k2(mat, med, &mut assi, &mut data, b, j);
 		}
-		if n_swaps == swaps_before {
+		if n_swaps == swaps_before || loss >= lastloss {
 			break; // converged
 		}
 	}

@@ -59,7 +59,7 @@ where
 	let (mut lastswap, mut n_swaps, mut iter) = (n, 0, 0);
 	while iter < maxiter {
 		iter += 1;
-		let swaps_before = n_swaps;
+		let (swaps_before, lastloss) = (n_swaps, loss);
 		for j in 0..n {
 			if j == lastswap {
 				break;
@@ -74,14 +74,10 @@ where
 			n_swaps += 1;
 			lastswap = j;
 			// perform the swap
-			let newloss = do_swap(mat, med, &mut data, b, j);
-			if newloss >= loss {
-				break; // Probably numerically unstable now.
-			}
-			loss = newloss;
+			loss = do_swap(mat, med, &mut data, b, j);
 			update_removal_loss(&data, &mut removal_loss);
 		}
-		if n_swaps == swaps_before {
+		if n_swaps == swaps_before || loss >= lastloss {
 			break; // converged
 		}
 	}
@@ -148,7 +144,7 @@ where
 	let seq = rand::seq::index::sample(rng, n, n); // random shuffling
 	while iter < maxiter {
 		iter += 1;
-		let swaps_before = n_swaps;
+		let (swaps_before, lastloss) = (n_swaps, loss);
 		for j in seq.iter() {
 			if j == lastswap {
 				break;
@@ -163,14 +159,10 @@ where
 			n_swaps += 1;
 			lastswap = j;
 			// perform the swap
-			let newloss = do_swap(mat, med, &mut data, b, j);
-			if newloss >= loss {
-				break; // Probably numerically unstable now.
-			}
-			loss = newloss;
+			loss = do_swap(mat, med, &mut data, b, j);
 			update_removal_loss(&data, &mut removal_loss);
 		}
-		if n_swaps == swaps_before {
+		if n_swaps == swaps_before || loss >= lastloss {
 			break; // converged
 		}
 	}

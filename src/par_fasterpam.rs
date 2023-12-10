@@ -66,7 +66,7 @@ where
 	let seq = rand::seq::index::sample(rng, n, n); // random shuffling
 	while iter < maxiter {
 		iter += 1;
-		let swaps_before = n_swaps;
+		let (swaps_before, lastloss) = (n_swaps, loss);
 		for j in seq.iter() {
 			if j == lastswap {
 				break;
@@ -81,14 +81,10 @@ where
 			n_swaps += 1;
 			lastswap = j;
 			// perform the swap
-			let newloss = par_do_swap(mat, med, &mut data, b, j);
-			if newloss >= loss {
-				break; // Probably numerically unstable now.
-			}
-			loss = newloss;
+			loss = par_do_swap(mat, med, &mut data, b, j);
 			update_removal_loss(&data, &mut removal_loss);
 		}
-		if n_swaps == swaps_before {
+		if n_swaps == swaps_before || loss >= lastloss {
 			break; // converged
 		}
 	}
