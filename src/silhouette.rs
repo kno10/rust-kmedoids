@@ -52,6 +52,7 @@ where
 		+ From<u32>,
 	M: ArrayAdapter<N>,
 {
+	assert!(mat.is_square(), "Dissimilarity matrix is not square");
 	let mut sil = if samples {
 		vec![L::zero(); assi.len()]
 	} else {

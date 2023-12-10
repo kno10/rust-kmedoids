@@ -177,31 +177,31 @@ fn find_best_swap_pammedsil<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>], j
 			if o == j {
 				continue;
 			}
-			let djo = mat.get(j, o);
+			let doj = mat.get(o, j);
 			// Current medoid is being replaced:
 			if reco.near.i as usize == m {
-				if djo < reco.seco.d {
+				if doj < reco.seco.d {
 					// Assign to new medoid:
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(djo, reco.seco.d);
-				} else if djo < reco.third.d {
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.seco.d);
+				} else if doj < reco.third.d {
 					// Assign to second nearest instead:
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.seco.d, djo);
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.seco.d, doj);
 				} else {
 					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.seco.d, reco.third.d);
 				}
 			} else if reco.seco.i as usize == m  {
-				if djo < reco.near.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(djo, reco.near.d);
-				} else if djo < reco.third.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, djo);
+				if doj < reco.near.d {
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
+				} else if doj < reco.third.d {
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
 				} else {
 					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, reco.third.d);
 				}
 			} else {
-				if djo < reco.near.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(djo, reco.near.d);
-				} else if djo < reco.seco.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, djo);
+				if doj < reco.near.d {
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
+				} else if doj < reco.seco.d {
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
 				}
 			}
 		}
@@ -228,27 +228,27 @@ fn find_best_swap_pammedsil_k2<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>]
 			if o == j {
 				continue;
 			}
-			let djo = mat.get(j, o);
+			let doj = mat.get(o, j);
 			// Current medoid is being replaced:
 			if reco.near.i as usize == m {
-				if djo < reco.seco.d {
+				if doj < reco.seco.d {
 					// Assign to new medoid:
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(djo, reco.seco.d);
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.seco.d);
 				} else {
 					// Assign to second nearest instead:
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.seco.d, djo);
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.seco.d, doj);
 				}
 			} else if reco.seco.i as usize == m  {
-				if djo < reco.near.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(djo, reco.near.d);
+				if doj < reco.near.d {
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
 				} else {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, djo);
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
 				}
 			} else {
-				if djo < reco.near.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(djo, reco.near.d);
-				} else if djo < reco.seco.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, djo);
+				if doj < reco.near.d {
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
+				} else if doj < reco.seco.d {
+					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
 				}
 			}
 		}
@@ -278,7 +278,7 @@ fn pammedsil_build_initialize<M, N, L>(
 		let mut sum = L::zero();
 		for j in 0..n {
 			if j != i {
-				sum += <L as From<N>>::from(mat.get(i, j));
+				sum += <L as From<N>>::from(mat.get(j, i));
 			}
 		}
 		if i == 0 || sum < best.0 {
@@ -288,7 +288,7 @@ fn pammedsil_build_initialize<M, N, L>(
 	let mut loss = best.0;
 	meds.push(best.1);
 	for j in 0..n {
-		data.push(Reco::new(0, mat.get(best.1, j), u32::MAX, N::zero(), u32::MAX, N::zero()));
+		data.push(Reco::new(0, mat.get(j, best.1), u32::MAX, N::zero(), u32::MAX, N::zero()));
 	}
 	// choose remaining medoids
 	for l in 1..k {
@@ -297,7 +297,7 @@ fn pammedsil_build_initialize<M, N, L>(
 			let mut sum = -<L as From<N>>::from(data[i].near.d);
 			for (j, dj) in data.iter().enumerate() {
 				if j != i {
-					let d = mat.get(i, j);
+					let d = mat.get(j, i);
 					if d < dj.near.d {
 						sum += <L as From<N>>::from(d) - <L as From<N>>::from(dj.near.d)
 					}
@@ -316,7 +316,7 @@ fn pammedsil_build_initialize<M, N, L>(
 				recj.seco = recj.near;
 				recj.near = DistancePair::new(l as u32, N::zero());
 			} else {
-				let dj = mat.get(best.1, j);
+				let dj = mat.get(j, best.1);
 				if dj < recj.near.d {
 					recj.third = recj.seco;
 					recj.seco = recj.near;

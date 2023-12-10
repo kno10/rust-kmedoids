@@ -165,7 +165,7 @@ fn pamsil_build_initialize<M, N, L>(
 		let mut sum = L::zero();
 		for j in 0..n {
 			if j != i {
-				sum += L::from(mat.get(i, j));
+				sum += L::from(mat.get(j, i));
 			}
 		}
 		if i == 0 || sum < best.0 {
@@ -177,7 +177,7 @@ fn pamsil_build_initialize<M, N, L>(
 	let mut data = Vec::<N>::with_capacity(n);
 	assi.fill(0);
 	for j in 0..n {
-		data.push(mat.get(best.1, j));
+		data.push(mat.get(j, best.1));
 	}
 	// choose remaining medoids
 	for _ in 1..k {
@@ -186,7 +186,7 @@ fn pamsil_build_initialize<M, N, L>(
 			let mut sum = -L::from(*di);
 			for (j, dnear) in data.iter().enumerate() {
 				if j != i {
-					let d = mat.get(i, j);
+					let d = mat.get(j, i);
 					if d < *dnear {
 						sum += L::from(d) - L::from(*dnear)
 					}
@@ -204,7 +204,7 @@ fn pamsil_build_initialize<M, N, L>(
 				*dnear = N::zero();
 				continue;
 			}
-			let dj = mat.get(best.1, j);
+			let dj = mat.get(j, best.1);
 			if dj < *dnear {
 				*dnear = dj;
 			}

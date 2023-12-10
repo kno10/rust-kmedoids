@@ -224,15 +224,15 @@ where
 	// Improvement from the journal version:
 	let mut acc = L::zero();
 	for (o, reco) in data.iter().enumerate() {
-		let djo = mat.get(j, o);
+		let doj = mat.get(o, j);
 		// New medoid is closest:
-		if djo < reco.near.d {
-			acc += L::from(djo) - L::from(reco.near.d);
+		if doj < reco.near.d {
+			acc += L::from(doj) - L::from(reco.near.d);
 			// loss already includes ds - dn, remove
 			ploss[reco.near.i as usize] += L::from(reco.near.d) - L::from(reco.seco.d);
-		} else if djo < reco.seco.d {
+		} else if doj < reco.seco.d {
 			// loss already includes ds - dn, adjust to d(xo) - dn
-			ploss[reco.near.i as usize] += L::from(djo) - L::from(reco.seco.d);
+			ploss[reco.near.i as usize] += L::from(doj) - L::from(reco.seco.d);
 		}
 	}
 	let (b, bloss) = find_min(&mut ploss.iter());
@@ -261,13 +261,13 @@ pub(crate) fn update_second_nearest<M, N>(
 	n: usize,
 	b: usize,
 	o: usize,
-	djo: N,
+	doj: N,
 ) -> DistancePair<N>
 where
 	N: PartialOrd + Copy,
 	M: ArrayAdapter<N>,
 {
-	let mut s = DistancePair::new(b as u32, djo);
+	let mut s = DistancePair::new(b as u32, doj);
 	for (i, &mi) in med.iter().enumerate() {
 		if i == n || i == b {
 			continue;
@@ -308,25 +308,25 @@ where
 				reco.near = DistancePair::new(b as u32, N::zero());
 				return L::zero();
 			}
-			let djo = mat.get(j, o);
+			let doj = mat.get(o, j);
 			// Nearest medoid is gone:
 			if reco.near.i == b as u32 {
-				if djo < reco.seco.d {
-					reco.near = DistancePair::new(b as u32, djo);
+				if doj < reco.seco.d {
+					reco.near = DistancePair::new(b as u32, doj);
 				} else {
 					reco.near = reco.seco;
-					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, djo);
+					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, doj);
 				}
 			} else {
 				// nearest not removed
-				if djo < reco.near.d {
+				if doj < reco.near.d {
 					reco.seco = reco.near;
-					reco.near = DistancePair::new(b as u32, djo);
-				} else if djo < reco.seco.d {
-					reco.seco = DistancePair::new(b as u32, djo);
+					reco.near = DistancePair::new(b as u32, doj);
+				} else if doj < reco.seco.d {
+					reco.seco = DistancePair::new(b as u32, doj);
 				} else if reco.seco.i == b as u32 {
 					// second nearest was replaced
-					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, djo);
+					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, doj);
 				}
 			}
 			L::from(reco.near.d)

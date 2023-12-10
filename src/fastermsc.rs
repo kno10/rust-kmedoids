@@ -156,23 +156,23 @@ pub(crate) fn find_best_swap<M, N, L>(
 	// Improvement from the journal version:
 	let mut acc = L::zero();
 	for (o, reco) in data.iter().enumerate() {
-		let djo = mat.get(j, o);
-		if djo < reco.near.d {
-			acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(djo, reco.near.d);
+		let doj = mat.get(o, j);
+		if doj < reco.near.d {
+			acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
 			// loss already includes (dt - ds) - (ds - dn), remove
-			ploss[reco.near.i as usize] += _loss::<N, L>(djo, reco.near.d) + _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.near.d + djo, reco.seco.d);
+			ploss[reco.near.i as usize] += _loss::<N, L>(doj, reco.near.d) + _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.near.d + doj, reco.seco.d);
 			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, reco.seco.d);
-		} else if djo < reco.seco.d {
-			acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, djo);
-			ploss[reco.near.i as usize] += _loss::<N, L>(reco.near.d, djo) + _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.near.d + djo, reco.seco.d);
+		} else if doj < reco.seco.d {
+			acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
+			ploss[reco.near.i as usize] += _loss::<N, L>(reco.near.d, doj) + _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.near.d + doj, reco.seco.d);
 			// loss already includes (dt - ds) - (ds - dn), adjust to 2*d(xo) - ds - dt
 			// loss already includes (dt - ds), adjust to 2*d(xo) - ds - dt
 			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, reco.seco.d);
-		} else if djo < reco.third.d {
+		} else if doj < reco.third.d {
 			// loss already includes (dt - ds) - (ds - dn), adjust to d(xo)- dt
-			ploss[reco.near.i as usize] += _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.seco.d, djo);
+			ploss[reco.near.i as usize] += _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.seco.d, doj);
 			// loss already includes (dt - ds), adjust to d(xo)- dt
-			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, djo);
+			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, doj);
 		}
 	}
 	let (b, bloss) = find_max(&mut ploss.iter());
@@ -203,13 +203,13 @@ pub(crate) fn update_third_nearest<M, N>(
 	s: usize,
 	b: usize,
 	o: usize,
-	djo: N,
+	doj: N,
 ) -> DistancePair<N>
 	where
 		N: PartialOrd + Copy,
 		M: ArrayAdapter<N>,
 {
-	let mut dist = DistancePair::new(b as u32, djo);
+	let mut dist = DistancePair::new(b as u32, doj);
 	for (i, &mi) in med.iter().enumerate() {
 		if i == n || i == b || i == s {
 			continue;
@@ -253,43 +253,43 @@ pub(crate) fn do_swap<M, N, L>(
 				reco.near = DistancePair::new(b as u32, N::zero());
 				return L::zero();
 			}
-			let djo = mat.get(j, o);
+			let doj = mat.get(o, j);
 			// Nearest medoid is gone:
 			if reco.near.i == b as u32 {
-				if djo < reco.seco.d {
-					reco.near = DistancePair::new(b as u32, djo);
-				} else if reco.third.i == u32::MAX || djo < reco.third.d {
+				if doj < reco.seco.d {
+					reco.near = DistancePair::new(b as u32, doj);
+				} else if reco.third.i == u32::MAX || doj < reco.third.d {
 					reco.near = reco.seco;
-					reco.seco = DistancePair::new(b as u32, djo);
+					reco.seco = DistancePair::new(b as u32, doj);
 				} else {
 					reco.near = reco.seco;
 					reco.seco = reco.third;
-					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, djo);
+					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, doj);
 				}
 			} else if reco.seco.i == b as u32{
 				// second nearest was replaced
-				if djo < reco.near.d {
+				if doj < reco.near.d {
 					reco.seco = reco.near;
-					reco.near = DistancePair::new(b as u32, djo);
-				} else if reco.third.i == u32::MAX || djo < reco.third.d {
-					reco.seco = DistancePair::new(b as u32, djo);
+					reco.near = DistancePair::new(b as u32, doj);
+				} else if reco.third.i == u32::MAX || doj < reco.third.d {
+					reco.seco = DistancePair::new(b as u32, doj);
 				} else {
 					reco.seco = reco.third;
-					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, djo);
+					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, doj);
 				}
 			} else {
 				// nearest not removed
-				if djo < reco.near.d {
+				if doj < reco.near.d {
 					reco.third = reco.seco;
 					reco.seco = reco.near;
-					reco.near = DistancePair::new(b as u32, djo);
-				} else if djo < reco.seco.d {
+					reco.near = DistancePair::new(b as u32, doj);
+				} else if doj < reco.seco.d {
 					reco.third = reco.seco;
-					reco.seco = DistancePair::new(b as u32, djo);
-				} else if reco.third.i == u32::MAX || djo < reco.third.d {
-					reco.third = DistancePair::new(b as u32, djo);
+					reco.seco = DistancePair::new(b as u32, doj);
+				} else if reco.third.i == u32::MAX || doj < reco.third.d {
+					reco.third = DistancePair::new(b as u32, doj);
 				} else if reco.third.i == b as u32 {
-					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, djo);
+					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, doj);
 				}
 			}
 			_loss::<N, L>(reco.near.d, reco.seco.d)
@@ -384,10 +384,10 @@ pub(crate) fn find_best_swap_k2<M, N, L>(
 {
 	let mut ploss = vec![L::zero(); 2];
 	for (o, d) in data.iter().enumerate() {
-		let djo = mat.get(j, o);
+		let doj = mat.get(o, j);
 		// We do not use the assignment here, because we stored d0/d1 by medoid position, not closeness
-		ploss[0] += if djo < d.1 { _loss(djo, d.1) } else { _loss(d.1, djo) };
-		ploss[1] += if djo < d.0 { _loss(djo, d.0) } else { _loss(d.0, djo) };
+		ploss[0] += if doj < d.1 { _loss(doj, d.1) } else { _loss(d.1, doj) };
+		ploss[1] += if doj < d.0 { _loss(doj, d.0) } else { _loss(d.0, doj) };
 	}
 	let (b, bloss) = find_min(&mut ploss.iter());
 	(bloss, b)
@@ -422,14 +422,14 @@ pub(crate) fn do_swap_k2<M, N, L>(
 					d.0 = N::zero();
 					return L::zero();
 				}
-				let djo = mat.get(j, o);
-				d.0 = djo;
-				if djo < d.1 || (djo == d.1 && *a == 0) {
+				let doj = mat.get(o, j);
+				d.0 = doj;
+				if doj < d.1 || (doj == d.1 && *a == 0) {
 					*a = 0;
-					return _loss::<N, L>(djo, d.1);
+					return _loss::<N, L>(doj, d.1);
 				} else {
 					*a = 1;
-					return _loss::<N, L>(d.1, djo);
+					return _loss::<N, L>(d.1, doj);
 				}
 			})
 			.reduce(L::add)
@@ -443,14 +443,14 @@ pub(crate) fn do_swap_k2<M, N, L>(
 					d.1 = N::zero();
 					return L::zero();
 				}
-				let djo = mat.get(j, o);
-				d.1 = djo;
-				if djo < d.0 || (djo == d.0 && *a == 1) {
+				let doj = mat.get(o, j);
+				d.1 = doj;
+				if doj < d.0 || (doj == d.0 && *a == 1) {
 					*a = 1;
-					return _loss::<N, L>(djo, d.0);
+					return _loss::<N, L>(doj, d.0);
 				} else {
 					*a = 0;
-					return _loss::<N, L>(d.0, djo);
+					return _loss::<N, L>(d.0, doj);
 				}
 			})
 			.reduce(L::add)

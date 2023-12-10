@@ -212,19 +212,19 @@ where
 			if o == j {
 				continue;
 			}
-			let djo = mat.get(j, o);
+			let doj = mat.get(o, j);
 			// Current medoid is being replaced:
 			if reco.near.i as usize == m {
-				if djo < reco.seco.d {
+				if doj < reco.seco.d {
 					// Assign to new medoid:
-					acc += L::from(djo) - L::from(reco.near.d)
+					acc += L::from(doj) - L::from(reco.near.d)
 				} else {
 					// Assign to second nearest instead:
 					acc += L::from(reco.seco.d) - L::from(reco.near.d)
 				}
-			} else if djo < reco.near.d {
+			} else if doj < reco.near.d {
 				// new mediod is closer:
-				acc += L::from(djo) - L::from(reco.near.d)
+				acc += L::from(doj) - L::from(reco.near.d)
 			} // else no change
 		}
 		if acc < best.0 {
@@ -247,13 +247,14 @@ where
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
+	assert!(mat.is_square(), "Dissimilarity matrix is not square");
 	// choose first medoid
 	let mut best = (L::zero(), k);
 	for i in 0..n {
 		let mut sum = L::zero();
 		for j in 0..n {
 			if j != i {
-				sum += L::from(mat.get(i, j));
+				sum += L::from(mat.get(j, i));
 			}
 		}
 		if i == 0 || sum < best.0 {
@@ -263,7 +264,7 @@ where
 	let mut loss = best.0;
 	meds.push(best.1);
 	for j in 0..n {
-		data.push(Rec::new(0, mat.get(best.1, j), u32::MAX, N::zero()));
+		data.push(Rec::new(0, mat.get(j, best.1), u32::MAX, N::zero()));
 	}
 	// choose remaining medoids
 	for l in 1..k {
@@ -272,7 +273,7 @@ where
 			let mut sum = -L::from(data[i].near.d);
 			for (j, dj) in data.iter().enumerate() {
 				if j != i {
-					let d = mat.get(i, j);
+					let d = mat.get(j, i);
 					if d < dj.near.d {
 						sum += L::from(d) - L::from(dj.near.d)
 					}
@@ -291,7 +292,7 @@ where
 				recj.near = DistancePair::new(l as u32, N::zero());
 				continue;
 			}
-			let dj = mat.get(best.1, j);
+			let dj = mat.get(j, best.1);
 			if dj < recj.near.d {
 				recj.seco = recj.near;
 				recj.near = DistancePair::new(l as u32, dj);

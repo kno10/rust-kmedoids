@@ -154,15 +154,15 @@ where
 				let end = usize::min(start + stepsize, n);
 				for o in start..end {
 					let reco = &data[o];
-					let djo = mat.get(j, o);
+					let doj = mat.get(o, j);
 					// New medoid is closest:
-					if djo < reco.near.d {
-						lagg += L::from(djo) - L::from(reco.near.d);
+					if doj < reco.near.d {
+						lagg += L::from(doj) - L::from(reco.near.d);
 						// loss already includes ds - dn, remove
 						loss[reco.near.i as usize] += L::from(reco.near.d) - L::from(reco.seco.d);
-					} else if djo < reco.seco.d {
+					} else if doj < reco.seco.d {
 						// loss already includes ds - dn, adjust to d(xo) - dn
-						loss[reco.near.i as usize] += L::from(djo) - L::from(reco.seco.d);
+						loss[reco.near.i as usize] += L::from(doj) - L::from(reco.seco.d);
 					}
 				}
 				// Synchronize for merging the results
@@ -204,25 +204,25 @@ where
 				reco.near = DistancePair::new(b as u32, N::zero());
 				return L::zero();
 			}
-			let djo = mat.get(j, o);
+			let doj = mat.get(o, j);
 			// Nearest medoid is gone:
 			if reco.near.i == b as u32 {
-				if djo < reco.seco.d {
-					reco.near = DistancePair::new(b as u32, djo);
+				if doj < reco.seco.d {
+					reco.near = DistancePair::new(b as u32, doj);
 				} else {
 					reco.near = reco.seco;
-					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, djo);
+					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, doj);
 				}
 			} else {
 				// nearest not removed
-				if djo < reco.near.d {
+				if doj < reco.near.d {
 					reco.seco = reco.near;
-					reco.near = DistancePair::new(b as u32, djo);
+					reco.near = DistancePair::new(b as u32, doj);
 				} else if reco.seco.i == b as u32 {
 					// second nearest was replaced
-					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, djo);
-				} else if djo < reco.seco.d {
-					reco.seco = DistancePair::new(b as u32, djo);
+					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, doj);
+				} else if doj < reco.seco.d {
+					reco.seco = DistancePair::new(b as u32, doj);
 				}
 			}
 			L::from(reco.near.d)

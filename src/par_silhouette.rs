@@ -58,6 +58,7 @@ where
 	M: ArrayAdapter<N> + Sync + Send,
 {
 	let mut lsum = L::zero();
+	assert!(mat.is_square(), "Dissimilarity matrix is not square");
 	assi.into_par_iter()
 		.enumerate()
 		.map(|(i, &ai)| {
