@@ -167,7 +167,7 @@ pub(crate) fn debug_assert_assignment<M, N>(_mat: &M, _med: &[usize], _data: &[R
 	}
 }
 
-/// Debug helper function
+/// Debug helper function, for methods with three nearest medoids
 pub(crate) fn debug_assert_assignment_th<M, N>(_mat: &M, _med: &[usize], _data: &[Reco<N>])
 	where
 		N: PartialOrd + Copy,

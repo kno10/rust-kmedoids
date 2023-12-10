@@ -3,8 +3,7 @@ use crate::util::*;
 use core::ops::AddAssign;
 use num_traits::{Signed, Zero, Float};
 use std::convert::From;
-use crate::fastermsc::{initial_assignment,update_removal_loss,find_best_swap,do_swap};
-use crate::fastermsc::{fastermsc_k2};
+use crate::fastermsc::{initial_assignment,update_removal_loss,find_best_swap,do_swap,fastermsc_k2};
 
 #[inline]
 fn _loss<N, L>(a: N, b: N) -> L
@@ -45,13 +44,13 @@ fn _loss<N, L>(a: N, b: N) -> L
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
 /// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::dynmsc(&data, &mut meds, 100);
+/// let (loss, assi, n_iter, n_swap, meds, losses): (f64, _, _, _, _, _) = kmedoids::dynmsc(&data, &meds, 100);
 /// println!("Loss is: {}", loss);
 /// println!("Best k: {}", meds.len());
 /// ```
 pub fn dynmsc<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &Vec<usize>,
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize, Vec<usize>, Vec<L>)
 	where
@@ -59,17 +58,18 @@ pub fn dynmsc<M, N, L>(
 		L: Float + Signed + AddAssign + From<N> + From<u32> + std::fmt::Debug,
 		M: ArrayAdapter<N>,
 {
+	let mut med = med.clone();
 	let (n, mut k) = (mat.len(), med.len());
 	if k == 1 {
 		let mut return_loss = vec![L::zero(); 1 as usize];
 		let assi = vec![0; n];
-		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
+		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, &mut med, 0);
 		return_loss[0] = loss;
-		let mut return_meds = med.clone();
+		let return_meds = med.clone();
 		return (loss, assi, 1, if swapped { 1 } else { 0 }, return_meds, return_loss);
 	}
-	let (mut loss, mut data): (L, _) = initial_assignment(mat, med);
-	debug_assert_assignment_th(mat, med, &data);
+	let (mut loss, mut data): (L, _) = initial_assignment(mat, &med);
+	debug_assert_assignment_th(mat, &med, &data);
 
 	let mut return_loss = vec![L::zero(); k - 1];
 	let mut best_loss = L::zero();
@@ -86,7 +86,7 @@ pub fn dynmsc<M, N, L>(
 		iter = 0;
 		while iter < maxiter {
 			iter += 1;
-			let swaps_before = n_swaps;
+			let (swaps_before, lastloss) = (n_swaps, loss);
 			for j in 0..n {
 				if j == lastswap {
 					break;
@@ -101,14 +101,10 @@ pub fn dynmsc<M, N, L>(
 				n_swaps += 1;
 				lastswap = j;
 				// perform the swap
-				let newloss = do_swap(mat, med, &mut data, b, j);
-				if newloss >= loss {
-					break; // Probably numerically unstable now.
-				}
-				loss = newloss;
+				loss = do_swap(mat, &mut med, &mut data, b, j);
 				update_removal_loss(&data, &mut removal_loss);
 			}
-			if n_swaps == swaps_before {
+			if n_swaps == swaps_before || loss >= lastloss {
 				break; // converged
 			}
 		}
@@ -128,11 +124,11 @@ pub fn dynmsc<M, N, L>(
 		}
 		return_swaps = return_swaps + n_swaps;
 		return_iter = return_iter + iter;
-		loss = remove_med(mat, med, &mut data, r.1);
+		loss = remove_med(mat, &mut med, &mut data, r.1);
 		removal_loss.remove(r.1);
 		k = med.len();
 	}
-	let (loss2, assi2, iter2, n_swaps2): (L, _, _, _) = fastermsc_k2(mat, med, maxiter);
+	let (loss2, assi2, iter2, n_swaps2): (L, _, _, _) = fastermsc_k2(mat, &mut med, maxiter);
 	return_loss[0] = loss2;
 	if loss2 > best_loss {
 		return_meds = med.clone();

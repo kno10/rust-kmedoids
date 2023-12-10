@@ -1,9 +1,12 @@
 # Changelog
 
-## kmedoids 0.4.x (2023-12-xx)
+## kmedoids 0.5.0 (2023-12-10)
 
+- add DynMSC with automatic cluster number selection
 - move the check for numerical instability out of the loop
   in all the "faster" variants, as we do no longer do best-first
+- bump rayon to 1.8, no changes
+- bump byteorder to 1.5, no changes, in example only
 
 ## kmedoids 0.4.3 (2023-04-20)
 
