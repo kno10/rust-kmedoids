@@ -131,6 +131,7 @@ pub fn dynmsc<M, N, L>(
 	let (loss2, assi2, iter2, n_swaps2): (L, _, _, _) = fastermsc_k2(mat, &mut med, maxiter);
 	return_loss[0] = loss2;
 	if loss2 > best_loss {
+		best_loss = loss2;
 		return_meds = med.clone();
 		return_assi = assi2;
 	}

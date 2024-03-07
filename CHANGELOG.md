@@ -1,5 +1,9 @@
 # Changelog
 
+## kmedoids 0.5.1 (2024-03-xx)
+
+- DynMSC: best loss reported incorrectly if best k=2
+
 ## kmedoids 0.5.0 (2023-12-10)
 
 - add DynMSC with automatic cluster number selection
