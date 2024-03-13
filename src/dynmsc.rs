@@ -62,7 +62,13 @@ pub fn dynmsc<M, N, L>(
 {
 	let mut med = med.clone();
 	let (n, mut k) = (mat.len(), med.len());
-	let minimum_k = if mink < k { mink } else { k };
+	let mut minimum_k = if mink < k && mink > 0 {
+		mink
+	} else if mink < 1 {
+		1
+	} else {
+		k
+	};
 	if k == 1 {
 		let mut return_loss = vec![L::zero(); 1 as usize];
 		let assi = vec![0; n];
@@ -131,9 +137,9 @@ pub fn dynmsc<M, N, L>(
 		removal_loss.remove(r.1);
 		k = med.len();
 	}
-	if minimum_k == 2 {
+	if minimum_k <= 2 {
 		let (loss2, assi2, iter2, n_swaps2): (L, _, _, _) = fastermsc_k2(mat, &mut med, maxiter);
-		return_loss[0] = loss2;
+		return_loss[2 - minimum_k] = loss2;
 		if loss2 > best_loss {
 			best_loss = loss2;
 			return_meds = med.clone();
@@ -141,6 +147,9 @@ pub fn dynmsc<M, N, L>(
 		}
 		return_swaps = return_swaps + n_swaps2;
 		return_iter = return_iter + iter2;
+	}
+	if minimum_k <= 1 {
+		return_loss[0] = L::zero();
 	}
 	(best_loss, return_assi, return_iter, return_swaps, return_meds, return_loss)
 }
@@ -251,7 +260,7 @@ mod tests {
 		let (loss, assi, n_iter, n_swap, best_meds, losses): (f64, _, _, _, _, _) = dynmsc(&data, &mut meds, 2,100);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		let (msil, _): (f64, _) = medoid_silhouette(&data, &best_meds, false);
-		print!("DynMSC: {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, msil, sil, assi, best_meds, losses);
+		print!("DynMSC_simple: {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, msil, sil, assi, best_meds, losses);
 		assert_eq!(loss, 0.9375, "loss not as expected");
 		assert_eq!(msil, 0.9375, "Medoid Silhouette not as expected");
 		assert_eq!(best_meds.len(), 3, "Best k not as expected");
@@ -260,10 +269,10 @@ mod tests {
 	fn testdynmsc_mink() {
 		let data = ndarray::arr2(&[[0,1,2,3,1],[1,0,4,5,2],[2,4,0,6,3],[3,5,6,0,4],[2,1,5,6,5]]);
 		let mut meds = random_initialization(5, 3, &mut rand::thread_rng());
-		let (loss, assi, n_iter, n_swap, best_meds, losses): (f64, _, _, _, _, _) = dynmsc(&data, &mut meds, 3,100);
+		let (loss, assi, n_iter, n_swap, best_meds, losses): (f64, _, _, _, _, _) = dynmsc(&data, &mut meds, 1,100);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		let (msil, _): (f64, _) = medoid_silhouette(&data, &best_meds, false);
-		print!("DynMSC: {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, msil, sil, assi, best_meds, losses);
+		print!("DynMSC_mink: {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}", loss, n_iter, n_swap, msil, sil, assi, best_meds, losses);
 		assert_eq!(loss, 0.87, "loss not as expected");
 		assert_eq!(msil, 0.87, "Medoid Silhouette not as expected");
 		assert_eq!(best_meds.len(), 3, "Best k not as expected");
