@@ -3,6 +3,7 @@ use crate::util::*;
 use core::ops::AddAssign;
 use num_traits::{Signed, Zero, Float};
 use std::convert::From;
+use std::cmp::{min, max};
 use crate::fastermsc::{initial_assignment,update_removal_loss,find_best_swap,do_swap,fastermsc_k2};
 
 #[inline]
@@ -62,13 +63,7 @@ pub fn dynmsc<M, N, L>(
 {
 	let mut med = med.clone();
 	let (n, mut k) = (mat.len(), med.len());
-	let mut minimum_k = if mink < k && mink > 0 {
-		mink
-	} else if mink < 1 {
-		1
-	} else {
-		k
-	};
+	let minimum_k = min(max(mink, 1), k);
 	if k == 1 {
 		let mut return_loss = vec![L::zero(); 1 as usize];
 		let assi = vec![0; n];
@@ -156,7 +151,7 @@ pub fn dynmsc<M, N, L>(
 
 /// Update the third nearest medoid information
 /// Called after each swap.
-///#[inline]
+#[inline]
 pub(crate) fn update_third_nearest_without_new<M, N>(
 	mat: &M,
 	med: &[usize],
@@ -183,7 +178,7 @@ pub(crate) fn update_third_nearest_without_new<M, N>(
 }
 
 /// Remove one medoid
-///#[inline]
+#[inline]
 pub(crate) fn remove_med<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
@@ -204,42 +199,42 @@ pub(crate) fn remove_med<M, N, L>(
 		.map(|(o, reco)| {
 			if reco.near.i == b as u32 {
 				// nearest medoid is gone
-				if reco.seco.i == l as u32{
-					reco.seco.i = b as u32 ;
+				if reco.seco.i == l as u32 {
+					reco.seco.i = b as u32;
 				}
-				if reco.third.i == l as u32{
-					reco.third.i = b as u32 ;
+				if reco.third.i == l as u32 {
+					reco.third.i = b as u32;
 				}
 				reco.near = reco.seco;
 				reco.seco = reco.third;
 				reco.third = update_third_nearest_without_new(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o);
 			} else if reco.seco.i == b as u32 {
 				// second nearest is gone
-				if reco.near.i == l as u32{
+				if reco.near.i == l as u32 {
 					reco.near.i = b as u32;
 				}
-				if reco.third.i == l as u32{
+				if reco.third.i == l as u32 {
 					reco.third.i = b as u32;
 				}
 				reco.seco = reco.third;
 				reco.third = update_third_nearest_without_new(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o);
 			} else if reco.third.i == b as u32 {
 				// third nearest is gone
-				if reco.near.i == l as u32{
+				if reco.near.i == l as u32 {
 					reco.near.i = b as u32;
 				}
-				if reco.seco.i == l as u32{
+				if reco.seco.i == l as u32 {
 					reco.seco.i = b as u32;
 				}
 				reco.third = update_third_nearest_without_new(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o);
 			} else {
-				if reco.near.i == l as u32{
+				if reco.near.i == l as u32 {
 					reco.near.i = b as u32;
 				}
-				if reco.seco.i == l as u32{
+				if reco.seco.i == l as u32 {
 					reco.seco.i = b as u32;
 				}
-				if reco.third.i == l as u32{
+				if reco.third.i == l as u32 {
 					reco.third.i = b as u32;
 				}
 			}
@@ -248,6 +243,7 @@ pub(crate) fn remove_med<M, N, L>(
 		.reduce(L::add)
 		.unwrap()
 }
+
 #[cfg(test)]
 mod tests {
 	// TODO: use a larger, much more interesting example.

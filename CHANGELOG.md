@@ -1,8 +1,10 @@
 # Changelog
 
-## kmedoids 0.5.1 (2024-03-xx)
+## kmedoids 0.5.1 (2024-03-14)
 
 - DynMSC: best loss reported incorrectly if best k=2
+- add minimum k parameter
+- bump rayon version (no changes)
 
 ## kmedoids 0.5.0 (2023-12-10)
 

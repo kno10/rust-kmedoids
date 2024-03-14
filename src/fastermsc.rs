@@ -64,7 +64,7 @@ pub fn fastermsc<M, N, L>(
 	if k == 2 { // special hadling, as there is no third
 		return fastermsc_k2(mat, med, maxiter);
 	}
-	let (mut loss, mut data):(L,_) = initial_assignment(mat, med);
+	let (mut loss, mut data): (L, _) = initial_assignment(mat, med);
 	debug_assert_assignment_th(mat, med, &data);
 
 	let mut removal_loss = vec![L::zero(); k];
@@ -266,7 +266,7 @@ pub(crate) fn do_swap<M, N, L>(
 					reco.seco = reco.third;
 					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, doj);
 				}
-			} else if reco.seco.i == b as u32{
+			} else if reco.seco.i == b as u32 {
 				// second nearest was replaced
 				if doj < reco.near.d {
 					reco.seco = reco.near;
@@ -299,7 +299,6 @@ pub(crate) fn do_swap<M, N, L>(
 }
 
 /// Special case k=2 of the FasterMSC algorithm.
-#[inline]
 pub(crate) fn fastermsc_k2<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
@@ -340,6 +339,7 @@ pub(crate) fn fastermsc_k2<M, N, L>(
 	loss = L::one() - loss / <L as From<u32>>::from(n as u32);
 	(loss, assi, iter, n_swaps)
 }
+
 /// Perform the initial assignment to medoids, for k=2 only
 #[inline]
 pub(crate) fn initial_assignment_k2<M, N, L>(mat: &M, med: &[usize]) -> (L, Vec<usize>, Vec<(N,N)>)

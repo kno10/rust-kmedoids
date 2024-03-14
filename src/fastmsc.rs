@@ -56,8 +56,8 @@ pub fn fastmsc<M, N, L>(
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
 		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
-	if k == 2 {
-		return fastmsc_k2(mat, med, maxiter)
+	if k == 2 { // special hadling, as there is no third
+		return fastmsc_k2(mat, med, maxiter);
 	}
 	let (mut loss, mut data): (L,_) = initial_assignment(mat, med);
 	debug_assert_assignment_th(mat, med, &data);
@@ -94,7 +94,8 @@ pub fn fastmsc<M, N, L>(
 	loss = L::one() - loss / <L as From<u32>>::from(n as u32);
 	(loss, assi, iter, n_swaps)
 }
-/// Special case k=2 of the FasterMSC algorithm.
+
+/// Special case k=2 of the FastMSC algorithm.
 fn fastmsc_k2<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
