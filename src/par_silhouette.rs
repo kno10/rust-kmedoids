@@ -43,14 +43,14 @@ use std::convert::From;
 #[cfg(feature = "parallel")]
 pub fn par_silhouette<M, N, L>(mat: &M, assi: &[usize]) -> L
 where
-	N: Zero + PartialOrd + Copy + Sync + Send,
+	N: Zero + PartialOrd + Clone + Sync + Send,
 	L: AddAssign
 		+ Div<Output = L>
 		+ Sub<Output = L>
 		+ Signed
 		+ Zero
 		+ PartialOrd
-		+ Copy
+		+ Clone
 		+ From<N>
 		+ From<u32>
 		+ Sync
@@ -74,22 +74,22 @@ where
 				}
 			}
 			if buf[ai].0 > 0 {
-				let a = checked_div(buf[ai].1, buf[ai].0.into());
+				let a = checked_div(buf[ai].1.clone(), buf[ai].0.into());
 				let mut tmp = buf
 					.iter()
 					.enumerate()
 					.filter(|&(i, _)| i != ai)
-					.map(|(_, p)| checked_div(p.1, p.0.into()));
+					.map(|(_, p)| checked_div(p.1.clone(), p.0.into()));
 				// Ugly hack to get the min():
 				let tmp2 = tmp.next().unwrap_or_else(L::zero);
 				let b = tmp.fold(tmp2, |x, y| if y < x { y } else { x });
-				checked_div(b - a, if a > b { a } else { b }) // return value
+				checked_div(b.clone() - a.clone(), if a > b { a } else { b }) // return value
 			} else {
 				L::zero() // singleton
 			}
 		})
 		.collect::<Vec<L>>()
 		.iter()
-		.for_each(|x| lsum += *x);
+		.for_each(|x| lsum += x.clone());
 	lsum.div((assi.len() as u32).into())
 }

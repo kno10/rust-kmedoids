@@ -7,7 +7,7 @@ use std::convert::From;
 #[inline]
 fn _loss<N, L>(a: N, b: N) -> L
 	where
-		N: Zero + Copy,
+		N: Zero + Clone,
 		L: Float + From<N>,
 {
 	if N::is_zero(&a) || N::is_zero(&b) { L::zero() } else { <L as From<N>>::from(a) / <L as From<N>>::from(b) } 
@@ -47,11 +47,11 @@ fn _loss<N, L>(a: N, b: N) -> L
 /// ```
 pub fn fastermsc<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
@@ -103,7 +103,7 @@ pub fn fastermsc<M, N, L>(
 #[inline]
 pub(crate) fn initial_assignment<M, N, L>(mat: &M, med: &[usize]) -> (L, Vec<Reco<N>>)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
@@ -122,17 +122,17 @@ pub(crate) fn initial_assignment<M, N, L>(mat: &M, med: &[usize]) -> (L, Vec<Rec
 			for (m, &me) in med.iter().enumerate().skip(1) {
 				let d = mat.get(i, me);
 				if d < cur.near.d || i == me {
-					cur.third = cur.seco;
-					cur.seco = cur.near;
+					cur.third = cur.seco.clone();
+					cur.seco = cur.near.clone();
 					cur.near = DistancePair { i: m as u32, d };
 				} else if cur.seco.i == u32::MAX || d < cur.seco.d {
-					cur.third = cur.seco;
+					cur.third = cur.seco.clone();
 					cur.seco = DistancePair { i: m as u32, d };
 				} else if cur.third.i == u32::MAX || d < cur.third.d {
 					cur.third = DistancePair { i: m as u32, d };
 				}
 			}
-			_loss::<N, L>(cur.near.d, cur.seco.d)
+			_loss::<N, L>(cur.near.d.clone(), cur.seco.d.clone())
 		})
 		.reduce(L::add)
 		.unwrap();
@@ -148,7 +148,7 @@ pub(crate) fn find_best_swap<M, N, L>(
 	j: usize,
 ) -> (L, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
@@ -158,21 +158,21 @@ pub(crate) fn find_best_swap<M, N, L>(
 	for (o, reco) in data.iter().enumerate() {
 		let doj = mat.get(o, j);
 		if doj < reco.near.d {
-			acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
+			acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(doj.clone(), reco.near.d.clone());
 			// loss already includes (dt - ds) - (ds - dn), remove
-			ploss[reco.near.i as usize] += _loss::<N, L>(doj, reco.near.d) + _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.near.d + doj, reco.seco.d);
-			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, reco.seco.d);
+			ploss[reco.near.i as usize] += _loss::<N, L>(doj.clone(), reco.near.d.clone()) + _loss::<N, L>(reco.seco.d.clone(), reco.third.d.clone()) - _loss::<N, L>(reco.near.d.clone() + doj.clone(), reco.seco.d.clone());
+			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d.clone(), reco.third.d.clone()) - _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone());
 		} else if doj < reco.seco.d {
-			acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
-			ploss[reco.near.i as usize] += _loss::<N, L>(reco.near.d, doj) + _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.near.d + doj, reco.seco.d);
+			acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(reco.near.d.clone(), doj.clone());
+			ploss[reco.near.i as usize] += _loss::<N, L>(reco.near.d.clone(), doj.clone()) + _loss::<N, L>(reco.seco.d.clone(), reco.third.d.clone()) - _loss::<N, L>(reco.near.d.clone() + doj.clone(), reco.seco.d.clone());
 			// loss already includes (dt - ds) - (ds - dn), adjust to 2*d(xo) - ds - dt
 			// loss already includes (dt - ds), adjust to 2*d(xo) - ds - dt
-			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, reco.seco.d);
+			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d.clone(), reco.third.d.clone()) - _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone());
 		} else if doj < reco.third.d {
 			// loss already includes (dt - ds) - (ds - dn), adjust to d(xo)- dt
-			ploss[reco.near.i as usize] += _loss::<N, L>(reco.seco.d, reco.third.d) - _loss::<N, L>(reco.seco.d, doj);
+			ploss[reco.near.i as usize] += _loss::<N, L>(reco.seco.d.clone(), reco.third.d.clone()) - _loss::<N, L>(reco.seco.d.clone(), doj.clone());
 			// loss already includes (dt - ds), adjust to d(xo)- dt
-			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d, reco.third.d) - _loss::<N, L>(reco.near.d, doj);
+			ploss[reco.seco.i as usize] += _loss::<N, L>(reco.near.d.clone(), reco.third.d.clone()) - _loss::<N, L>(reco.near.d.clone(), doj.clone());
 		}
 	}
 	let (b, bloss) = find_max(&mut ploss.iter());
@@ -180,15 +180,15 @@ pub(crate) fn find_best_swap<M, N, L>(
 }
 
 /// Update the loss when removing each medoid
-pub(crate) fn update_removal_loss<N, L>(data: &[Reco<N>], loss: &mut Vec<L>)
+pub(crate) fn update_removal_loss<N, L>(data: &[Reco<N>], loss: &mut [L])
 	where
-		N: Zero + Copy,
+		N: Zero + Clone,
 		L: Float + Signed + AddAssign + From<N>,
 {
 	loss.fill(L::zero()); // stable since 1.50
 	for rec in data.iter() {
-		loss[rec.near.i as usize] += _loss::<N, L>(rec.near.d, rec.seco.d) - _loss::<N, L>(rec.seco.d, rec.third.d);
-		loss[rec.seco.i as usize] += _loss::<N, L>(rec.near.d, rec.seco.d) - _loss::<N, L>(rec.near.d, rec.third.d);
+		loss[rec.near.i as usize] += _loss::<N, L>(rec.near.d.clone(), rec.seco.d.clone()) - _loss::<N, L>(rec.seco.d.clone(), rec.third.d.clone());
+		loss[rec.seco.i as usize] += _loss::<N, L>(rec.near.d.clone(), rec.seco.d.clone()) - _loss::<N, L>(rec.near.d.clone(), rec.third.d.clone());
 		// as N might be unsigned
 	}
 }
@@ -206,7 +206,7 @@ pub(crate) fn update_third_nearest<M, N>(
 	doj: N,
 ) -> DistancePair<N>
 	where
-		N: PartialOrd + Copy,
+		N: PartialOrd + Clone,
 		M: ArrayAdapter<N>,
 {
 	let mut dist = DistancePair::new(b as u32, doj);
@@ -226,13 +226,13 @@ pub(crate) fn update_third_nearest<M, N>(
 #[inline]
 pub(crate) fn do_swap<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
-	data: &mut Vec<Reco<N>>,
+	med: &mut [usize],
+	data: &mut [Reco<N>],
 	b: usize,
 	j: usize,
 ) -> L
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
@@ -246,9 +246,9 @@ pub(crate) fn do_swap<M, N, L>(
 			if o == j {
 				if reco.near.i != b as u32 {
 					if reco.seco.i != b as u32 {
-						reco.third = reco.seco;
+						reco.third = reco.seco.clone();
 					}
-					reco.seco = reco.near;
+					reco.seco = reco.near.clone();
 				}
 				reco.near = DistancePair::new(b as u32, N::zero());
 				return L::zero();
@@ -259,32 +259,32 @@ pub(crate) fn do_swap<M, N, L>(
 				if doj < reco.seco.d {
 					reco.near = DistancePair::new(b as u32, doj);
 				} else if reco.third.i == u32::MAX || doj < reco.third.d {
-					reco.near = reco.seco;
+					reco.near = reco.seco.clone();
 					reco.seco = DistancePair::new(b as u32, doj);
 				} else {
-					reco.near = reco.seco;
-					reco.seco = reco.third;
+					reco.near = reco.seco.clone();
+					reco.seco = reco.third.clone();
 					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, doj);
 				}
 			} else if reco.seco.i == b as u32 {
 				// second nearest was replaced
 				if doj < reco.near.d {
-					reco.seco = reco.near;
+					reco.seco = reco.near.clone();
 					reco.near = DistancePair::new(b as u32, doj);
 				} else if reco.third.i == u32::MAX || doj < reco.third.d {
 					reco.seco = DistancePair::new(b as u32, doj);
 				} else {
-					reco.seco = reco.third;
+					reco.seco = reco.third.clone();
 					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, doj);
 				}
 			} else {
 				// nearest not removed
 				if doj < reco.near.d {
-					reco.third = reco.seco;
-					reco.seco = reco.near;
+					reco.third = reco.seco.clone();
+					reco.seco = reco.near.clone();
 					reco.near = DistancePair::new(b as u32, doj);
 				} else if doj < reco.seco.d {
-					reco.third = reco.seco;
+					reco.third = reco.seco.clone();
 					reco.seco = DistancePair::new(b as u32, doj);
 				} else if reco.third.i == u32::MAX || doj < reco.third.d {
 					reco.third = DistancePair::new(b as u32, doj);
@@ -292,7 +292,7 @@ pub(crate) fn do_swap<M, N, L>(
 					reco.third = update_third_nearest(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o, doj);
 				}
 			}
-			_loss::<N, L>(reco.near.d, reco.seco.d)
+			_loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone())
 		})
 		.reduce(L::add)
 		.unwrap()
@@ -301,11 +301,11 @@ pub(crate) fn do_swap<M, N, L>(
 /// Special case k=2 of the FasterMSC algorithm.
 pub(crate) fn fastermsc_k2<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
@@ -320,7 +320,7 @@ pub(crate) fn fastermsc_k2<M, N, L>(
 			if j == lastswap {
 				break;
 			}
-			if j == med[assi[j] as usize] {
+			if j == med[assi[j]] {
 				continue; // This already is a medoid
 			}
 			let (newloss, b): (L, _) = find_best_swap_k2(mat, &data, j); // assi not used, see below
@@ -344,7 +344,7 @@ pub(crate) fn fastermsc_k2<M, N, L>(
 #[inline]
 pub(crate) fn initial_assignment_k2<M, N, L>(mat: &M, med: &[usize]) -> (L, Vec<usize>, Vec<(N,N)>)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
@@ -352,7 +352,7 @@ pub(crate) fn initial_assignment_k2<M, N, L>(mat: &M, med: &[usize]) -> (L, Vec<
 	assert!(mat.is_square(), "Dissimilarity matrix is not square");
 	assert!(n <= u32::MAX as usize, "N is too large");
 	assert!(k == 2, "k must be 2");
-	let mut assi = vec![0 as usize; mat.len()];
+	let mut assi = vec![0_usize; mat.len()];
 	let mut data = vec![(N::zero(), N::zero()); mat.len()];
 	let loss = assi.iter_mut().zip(data.iter_mut())
 		.enumerate()
@@ -360,10 +360,10 @@ pub(crate) fn initial_assignment_k2<M, N, L>(mat: &M, med: &[usize]) -> (L, Vec<
 			*d = (mat.get(i, med[0]), mat.get(i, med[1]));
 			if d.0 < d.1 {
 				*a = 0;
-				return _loss::<N, L>(d.0, d.1);
+				_loss::<N, L>(d.0.clone(), d.1.clone()) // return
 			} else {
 				*a = 1;
-				return _loss::<N, L>(d.1, d.0);
+				_loss::<N, L>(d.1.clone(), d.0.clone()) // return
 			}
 		})
 		.reduce(L::add)
@@ -379,16 +379,16 @@ pub(crate) fn find_best_swap_k2<M, N, L>(
 	j: usize,
 ) -> (L, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
-	let mut ploss = vec![L::zero(); 2];
+	let mut ploss = [L::zero(); 2];
 	for (o, d) in data.iter().enumerate() {
 		let doj = mat.get(o, j);
 		// We do not use the assignment here, because we stored d0/d1 by medoid position, not closeness
-		ploss[0] += if doj < d.1 { _loss(doj, d.1) } else { _loss(d.1, doj) };
-		ploss[1] += if doj < d.0 { _loss(doj, d.0) } else { _loss(d.0, doj) };
+		ploss[0] += if doj < d.1 { _loss(doj.clone(), d.1.clone()) } else { _loss(d.1.clone(), doj.clone()) };
+		ploss[1] += if doj < d.0 { _loss(doj.clone(), d.0.clone()) } else { _loss(d.0.clone(), doj.clone()) };
 	}
 	let (b, bloss) = find_min(&mut ploss.iter());
 	(bloss, b)
@@ -398,14 +398,14 @@ pub(crate) fn find_best_swap_k2<M, N, L>(
 #[inline]
 pub(crate) fn do_swap_k2<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
-	assi: &mut Vec<usize>,
-	data: &mut Vec<(N, N)>,
+	med: &mut [usize],
+	assi: &mut [usize],
+	data: &mut [(N, N)],
 	b: usize,
 	j: usize,
 ) -> L
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
@@ -424,13 +424,13 @@ pub(crate) fn do_swap_k2<M, N, L>(
 					return L::zero();
 				}
 				let doj = mat.get(o, j);
-				d.0 = doj;
+				d.0 = doj.clone();
 				if doj < d.1 || (doj == d.1 && *a == 0) {
 					*a = 0;
-					return _loss::<N, L>(doj, d.1);
+					_loss::<N, L>(doj, d.1.clone()) // return
 				} else {
 					*a = 1;
-					return _loss::<N, L>(d.1, doj);
+					_loss::<N, L>(d.1.clone(), doj) // return
 				}
 			})
 			.reduce(L::add)
@@ -445,13 +445,13 @@ pub(crate) fn do_swap_k2<M, N, L>(
 					return L::zero();
 				}
 				let doj = mat.get(o, j);
-				d.1 = doj;
+				d.1 = doj.clone();
 				if doj < d.0 || (doj == d.0 && *a == 1) {
 					*a = 1;
-					return _loss::<N, L>(doj, d.0);
+					_loss::<N, L>(doj, d.0.clone()) // return
 				} else {
 					*a = 0;
-					return _loss::<N, L>(d.0, doj);
+					_loss::<N, L>(d.0.clone(), doj) // return
 				}
 			})
 			.reduce(L::add)

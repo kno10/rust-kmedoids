@@ -42,13 +42,13 @@ use std::sync::{Arc, Mutex};
 /// ```
 pub fn par_fasterpam<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	maxiter: usize,
 	rng: &mut impl rand::Rng,
 ) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy + Sync + Send,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + Sync + Send,
+	N: Zero + PartialOrd + Clone + Sync + Send,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N> + Sync + Send,
 	M: ArrayAdapter<N> + Sync + Send,
 {
 	let (n, k) = (mat.len(), med.len());
@@ -57,7 +57,7 @@ where
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
 		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
-	let (mut loss, mut data) = par_initial_assignment(mat, med);
+	let (mut loss, mut data): (L, Vec<Rec<N>>) = par_initial_assignment(mat, med);
 	debug_assert_assignment(mat, med, &data);
 
 	let mut removal_loss = vec![L::zero(); k];
@@ -66,7 +66,7 @@ where
 	let seq = rand::seq::index::sample(rng, n, n); // random shuffling
 	while iter < maxiter {
 		iter += 1;
-		let (swaps_before, lastloss) = (n_swaps, loss);
+		let (swaps_before, lastloss) = (n_swaps, loss.clone());
 		for j in seq.iter() {
 			if j == lastswap {
 				break;
@@ -96,8 +96,8 @@ where
 #[inline]
 fn par_initial_assignment<M, N, L>(mat: &M, med: &[usize]) -> (L, Vec<Rec<N>>)
 where
-	N: Zero + PartialOrd + Copy + Send + Sync,
-	L: AddAssign + Zero + PartialOrd + Copy + From<N> + Send + Sync,
+	N: Zero + PartialOrd + Clone + Send + Sync,
+	L: AddAssign + Zero + PartialOrd + Clone + From<N> + Send + Sync,
 	M: ArrayAdapter<N> + Sync,
 {
 	let n = mat.len();
@@ -116,13 +116,13 @@ where
 			for (m, &me) in med.iter().enumerate().skip(1) {
 				let d = mat.get(i, me);
 				if d < cur.near.d || i == me {
-					cur.seco = cur.near;
+					cur.seco = cur.near.clone();
 					cur.near = DistancePair { i: m as u32, d };
 				} else if cur.seco.i == u32::MAX || d < cur.seco.d {
 					cur.seco = DistancePair { i: m as u32, d };
 				}
 			}
-			L::from(cur.near.d)
+			L::from(cur.near.d.clone())
 		})
 		.reduce_with(L::add)
 		.unwrap();
@@ -133,8 +133,8 @@ where
 #[inline]
 fn par_find_best_swap<M, N, L>(mat: &M, removal_loss: &[L], data: &[Rec<N>], j: usize) -> (L, usize)
 where
-	N: Zero + PartialOrd + Copy + Sync + Send,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + Sync + Send,
+	N: Zero + PartialOrd + Clone + Sync + Send,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N> + Sync + Send,
 	M: ArrayAdapter<N> + Sync + Send,
 {
 	let n = mat.len();
@@ -152,17 +152,16 @@ where
 				let mut lagg = L::zero();
 				let start = x * stepsize;
 				let end = usize::min(start + stepsize, n);
-				for o in start..end {
-					let reco = &data[o];
+				for (o, reco) in data.iter().enumerate().take(end).skip(start) {
 					let doj = mat.get(o, j);
 					// New medoid is closest:
 					if doj < reco.near.d {
-						lagg += L::from(doj) - L::from(reco.near.d);
+						lagg += L::from(doj) - L::from(reco.near.d.clone());
 						// loss already includes ds - dn, remove
-						loss[reco.near.i as usize] += L::from(reco.near.d) - L::from(reco.seco.d);
+						loss[reco.near.i as usize] += L::from(reco.near.d.clone()) - L::from(reco.seco.d.clone());
 					} else if doj < reco.seco.d {
 						// loss already includes ds - dn, adjust to d(xo) - dn
-						loss[reco.near.i as usize] += L::from(doj) - L::from(reco.seco.d);
+						loss[reco.near.i as usize] += L::from(doj) - L::from(reco.seco.d.clone());
 					}
 				}
 				// Synchronize for merging the results
@@ -180,14 +179,14 @@ where
 #[inline]
 fn par_do_swap<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	data: &mut Vec<Rec<N>>,
 	b: usize,
 	j: usize,
 ) -> L
 where
-	N: Zero + PartialOrd + Copy + Send + Sync,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + Send + Sync,
+	N: Zero + PartialOrd + Clone + Send + Sync,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N> + Send + Sync,
 	M: ArrayAdapter<N> + Sync,
 {
 	let n = mat.len();
@@ -199,7 +198,7 @@ where
 		.map(|(o, reco)| {
 			if o == j {
 				if reco.near.i != b as u32 {
-					reco.seco = reco.near;
+					reco.seco = reco.near.clone();
 				}
 				reco.near = DistancePair::new(b as u32, N::zero());
 				return L::zero();
@@ -210,13 +209,13 @@ where
 				if doj < reco.seco.d {
 					reco.near = DistancePair::new(b as u32, doj);
 				} else {
-					reco.near = reco.seco;
+					reco.near = reco.seco.clone();
 					reco.seco = update_second_nearest(mat, med, reco.near.i as usize, b, o, doj);
 				}
 			} else {
 				// nearest not removed
 				if doj < reco.near.d {
-					reco.seco = reco.near;
+					reco.seco = reco.near.clone();
 					reco.near = DistancePair::new(b as u32, doj);
 				} else if reco.seco.i == b as u32 {
 					// second nearest was replaced
@@ -225,7 +224,7 @@ where
 					reco.seco = DistancePair::new(b as u32, doj);
 				}
 			}
-			L::from(reco.near.d)
+			L::from(reco.near.d.clone())
 		})
 		.reduce_with(L::add)
 		.unwrap()

@@ -73,16 +73,16 @@ impl<N: Zero> Reco<N> {
 
 /// Find the minimum (index and value)
 #[inline]
-pub(crate) fn find_min<'a, L: 'a, I: 'a>(a: &mut I) -> (usize, L)
+pub(crate) fn find_min<'a, L, I>(a: &mut I) -> (usize, L)
 	where
-		L: PartialOrd + Copy + Zero,
-		I: std::iter::Iterator<Item = &'a L>,
+		L: PartialOrd + Clone + Zero + 'a,
+		I: std::iter::Iterator<Item = &'a L> + 'a,
 {
 	let mut a = a.enumerate();
-	let mut best: (usize, L) = (0, *a.next().unwrap().1);
+	let mut best: (usize, L) = (0, a.next().unwrap().1.clone());
 	for (ik, iv) in a {
 		if *iv < best.1 {
-			best = (ik, *iv);
+			best = (ik, iv.clone());
 		}
 	}
 	best
@@ -90,16 +90,16 @@ pub(crate) fn find_min<'a, L: 'a, I: 'a>(a: &mut I) -> (usize, L)
 
 /// Find the maximum (index and value)
 #[inline]
-pub(crate) fn find_max<'a, L: 'a, I: 'a>(a: &mut I) -> (usize, L)
+pub(crate) fn find_max<'a, L, I>(a: &mut I) -> (usize, L)
 	where
-		L: PartialOrd + Copy + Zero,
-		I: std::iter::Iterator<Item = &'a L>,
+		L: PartialOrd + Clone + Zero + 'a,
+		I: std::iter::Iterator<Item = &'a L> + 'a,
 {
 	let mut a = a.enumerate();
-	let mut best: (usize, L) = (0, *a.next().unwrap().1);
+	let mut best: (usize, L) = (0, a.next().unwrap().1.clone());
 	for (ik, iv) in a {
 		if *iv > best.1 {
-			best = (ik, *iv);
+			best = (ik, iv.clone());
 		}
 	}
 	best
@@ -114,8 +114,8 @@ pub(crate) fn choose_medoid_within_partition<M, N, L>(
 	m: usize,
 ) -> (bool, L)
 	where
-		N: PartialOrd + Copy,
-		L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+		N: PartialOrd + Clone,
+		L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 		M: ArrayAdapter<N>,
 {
 	let first = med[m];
@@ -147,7 +147,7 @@ pub(crate) fn choose_medoid_within_partition<M, N, L>(
 /// Debug helper function
 pub(crate) fn debug_assert_assignment<M, N>(_mat: &M, _med: &[usize], _data: &[Rec<N>])
 	where
-		N: PartialOrd + Copy,
+		N: PartialOrd + Clone,
 		M: ArrayAdapter<N>,
 {
 	#[cfg(feature = "assertions")]
@@ -170,7 +170,7 @@ pub(crate) fn debug_assert_assignment<M, N>(_mat: &M, _med: &[usize], _data: &[R
 /// Debug helper function, for methods with three nearest medoids
 pub(crate) fn debug_assert_assignment_th<M, N>(_mat: &M, _med: &[usize], _data: &[Reco<N>])
 	where
-		N: PartialOrd + Copy,
+		N: PartialOrd + Clone,
 		M: ArrayAdapter<N>,
 {
 	#[cfg(feature = "assertions")]

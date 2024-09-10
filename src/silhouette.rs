@@ -40,24 +40,20 @@ use std::convert::From;
 /// ```
 pub fn silhouette<M, N, L>(mat: &M, assi: &[usize], samples: bool) -> (L, Vec<L>)
 where
-	N: Zero + PartialOrd + Copy,
+	N: Zero + PartialOrd + Clone,
 	L: AddAssign
 		+ Div<Output = L>
 		+ Sub<Output = L>
 		+ Signed
 		+ Zero
 		+ PartialOrd
-		+ Copy
+		+ Clone
 		+ From<N>
 		+ From<u32>,
 	M: ArrayAdapter<N>,
 {
 	assert!(mat.is_square(), "Dissimilarity matrix is not square");
-	let mut sil = if samples {
-		vec![L::zero(); assi.len()]
-	} else {
-		vec![L::zero(); 0]
-	};
+	let mut sil =  vec![L::zero(); if samples { assi.len() } else { 0}];
 	let mut lsum: L = L::zero();
 	let mut buf = Vec::<(u32, L)>::new();
 	for (i, &ai) in assi.iter().enumerate() {
@@ -75,23 +71,23 @@ where
 			return (L::zero(), sil);
 		}
 		let s = if buf[ai].0 > 0 {
-			let a = checked_div(buf[ai].1, buf[ai].0.into());
+			let a = checked_div(buf[ai].1.clone(), buf[ai].0.into());
 			let mut tmp = buf
 				.iter()
 				.enumerate()
 				.filter(|&(i, _)| i != ai)
-				.map(|(_, p)| checked_div(p.1, p.0.into()));
+				.map(|(_, p)| checked_div(p.1.clone(), p.0.into()));
 			// Ugly hack to get the min():
 			let tmp2 = tmp.next().unwrap_or_else(L::zero);
 			let b = tmp.fold(tmp2, |x, y| if y < x { y } else { x });
-			checked_div(b - a, if a > b { a } else { b })
+			checked_div(b.clone() - a.clone(), if a > b { a } else { b })
 		} else {
 			L::zero() // singleton
 		};
 		if samples {
-			sil[i] = s;
+			sil[i] = s.clone();
 		}
-		lsum += s;
+		lsum += s.clone();
 	}
 	if samples {
 		assert_eq!(sil.len(), assi.len(), "Length not as expected.");
@@ -138,14 +134,14 @@ where
 /// ```
 pub fn medoid_silhouette<M, N, L>(mat: &M, meds: &[usize], samples: bool) -> (L, Vec<L>)
 where
-	N: Zero + PartialOrd + Copy,
+	N: Zero + PartialOrd + Clone,
 	L: AddAssign
 		+ Div<Output = L>
 		+ Sub<Output = L>
 		+ Signed
 		+ Zero
 		+ PartialOrd
-		+ Copy
+		+ Clone
 		+ From<N>
 		+ From<u32>,
 	M: ArrayAdapter<N>,
@@ -157,6 +153,7 @@ where
 	if k == 1 { return (L::one(), sil); } // not really well-defined
 	assert!(k <= n, "invalid k, must be over 1 and at most N");
 	let mut loss = L::zero();
+	#[allow(clippy::needless_range_loop)]
 	for i in 0..n {
 		let (d1, d2) = (mat.get(i, meds[0]), mat.get(i, meds[1]));
 		let mut best = if d1 < d2 { (d1, d2) } else { (d2, d1) };
@@ -170,8 +167,8 @@ where
 			}
 		}
 		if !N::is_zero(&best.0) {
-			let s = <L as From<N>>::from(best.0) / <L as From<N>>::from(best.1);
-			if samples { sil[i] = L::one() - s; }
+			let s = <L as From<N>>::from(best.0.clone()) / <L as From<N>>::from(best.1.clone());
+			if samples { sil[i] = L::one() - s.clone(); }
 			loss += s;
 		}
 	}
@@ -182,7 +179,7 @@ where
 // helper function, returns 0 on division by 0
 pub(crate) fn checked_div<L>(x: L, y: L) -> L
 where
-	L: Div<Output = L> + Zero + Copy + PartialOrd,
+	L: Div<Output = L> + Zero + Clone + PartialOrd,
 {
 	if y > L::zero() {
 		x.div(y)

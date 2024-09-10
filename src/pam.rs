@@ -39,12 +39,12 @@ use std::convert::From;
 /// ```
 pub fn pam_swap<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+	N: Zero + PartialOrd + Clone,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let (loss, mut data) = initial_assignment(mat, med);
@@ -81,8 +81,8 @@ where
 /// ```
 pub fn pam_build<M, N, L>(mat: &M, k: usize) -> (L, Vec<usize>, Vec<usize>)
 where
-	N: Zero + PartialOrd + Copy,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+	N: Zero + PartialOrd + Clone,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -130,8 +130,8 @@ where
 /// ```
 pub fn pam<M, N, L>(mat: &M, k: usize, maxiter: usize) -> (L, Vec<usize>, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+	N: Zero + PartialOrd + Clone,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -149,14 +149,14 @@ where
 /// Main optimization function of PAM, not exposed (use pam_swap or pam)
 fn pam_optimize<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
-	data: &mut Vec<Rec<N>>,
+	med: &mut [usize],
+	data: &mut [Rec<N>],
 	maxiter: usize,
 	mut loss: L,
 ) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+	N: Zero + PartialOrd + Clone,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let (n, k) = (mat.len(), med.len());
@@ -200,14 +200,14 @@ where
 #[inline]
 fn find_best_swap_pam<M, N, L>(mat: &M, med: &[usize], data: &[Rec<N>], j: usize) -> (L, usize)
 where
-	N: Zero + PartialOrd + Copy,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+	N: Zero + PartialOrd + Clone,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let recj = &data[j];
 	let mut best = (L::zero(), usize::MAX);
 	for (m, _) in med.iter().enumerate() {
-		let mut acc: L = -L::from(recj.near.d); // j becomes medoid
+		let mut acc: L = -L::from(recj.near.d.clone()); // j becomes medoid
 		for (o, reco) in data.iter().enumerate() {
 			if o == j {
 				continue;
@@ -217,14 +217,14 @@ where
 			if reco.near.i as usize == m {
 				if doj < reco.seco.d {
 					// Assign to new medoid:
-					acc += L::from(doj) - L::from(reco.near.d)
+					acc += L::from(doj) - L::from(reco.near.d.clone())
 				} else {
 					// Assign to second nearest instead:
-					acc += L::from(reco.seco.d) - L::from(reco.near.d)
+					acc += L::from(reco.seco.d.clone()) - L::from(reco.near.d.clone())
 				}
 			} else if doj < reco.near.d {
 				// new mediod is closer:
-				acc += L::from(doj) - L::from(reco.near.d)
+				acc += L::from(doj) - L::from(reco.near.d.clone())
 			} // else no change
 		}
 		if acc < best.0 {
@@ -242,8 +242,8 @@ pub(crate) fn pam_build_initialize<M, N, L>(
 	k: usize,
 ) -> L
 where
-	N: Zero + PartialOrd + Copy,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+	N: Zero + PartialOrd + Clone,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -270,12 +270,12 @@ where
 	for l in 1..k {
 		best = (L::zero(), k);
 		for (i, _) in data.iter().enumerate() {
-			let mut sum = -L::from(data[i].near.d);
+			let mut sum = -L::from(data[i].near.d.clone());
 			for (j, dj) in data.iter().enumerate() {
 				if j != i {
 					let d = mat.get(j, i);
 					if d < dj.near.d {
-						sum += L::from(d) - L::from(dj.near.d)
+						sum += L::from(d) - L::from(dj.near.d.clone())
 					}
 				}
 			}
@@ -288,18 +288,18 @@ where
 		loss = L::zero();
 		for (j, recj) in data.iter_mut().enumerate() {
 			if j == best.1 {
-				recj.seco = recj.near;
+				recj.seco = recj.near.clone();
 				recj.near = DistancePair::new(l as u32, N::zero());
 				continue;
 			}
 			let dj = mat.get(j, best.1);
 			if dj < recj.near.d {
-				recj.seco = recj.near;
+				recj.seco = recj.near.clone();
 				recj.near = DistancePair::new(l as u32, dj);
 			} else if recj.seco.i == u32::MAX || dj < recj.seco.d {
 				recj.seco = DistancePair::new(l as u32, dj);
 			}
-			loss += L::from(recj.near.d);
+			loss += L::from(recj.near.d.clone());
 		}
 		meds.push(best.1);
 	}

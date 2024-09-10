@@ -42,11 +42,11 @@ use std::convert::From;
 /// ```
 pub fn fastmsc<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
@@ -98,11 +98,11 @@ pub fn fastmsc<M, N, L>(
 /// Special case k=2 of the FastMSC algorithm.
 fn fastmsc_k2<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
@@ -114,7 +114,7 @@ fn fastmsc_k2<M, N, L>(
 		iter += 1;
 		let mut best = (L::zero(), k, usize::MAX);
 		for j in 0..n {
-			if j == med[assi[j] as usize] {
+			if j == med[assi[j]] {
 				continue; // This already is a medoid
 			}
 			let (newloss, b): (L, _) = find_best_swap_k2(mat, &data, j); // assi not used, see below
@@ -122,14 +122,16 @@ fn fastmsc_k2<M, N, L>(
 				best = (newloss, b, j);
 			}
 		}
+		#[allow(clippy::neg_cmp_op_on_partial_ord)]
 		if !(best.0 < loss) {
 			break; // No improvement
 		}
 		// perform the swap
 		n_swaps += 1;
 		let newloss = do_swap_k2(mat, med, &mut assi, &mut data, best.1, best.2);
+		#[allow(clippy::neg_cmp_op_on_partial_ord)]
 		if !(newloss < loss) {
-			break; // Probably numerically unstable now.
+			break; // Probably numerically unstable
 		}
 		loss = newloss;
 	}

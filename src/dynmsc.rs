@@ -9,7 +9,7 @@ use crate::fastermsc::{initial_assignment,update_removal_loss,find_best_swap,do_
 #[inline]
 fn _loss<N, L>(a: N, b: N) -> L
 	where
-		N: Zero + Copy,
+		N: Zero,
 		L: Float + From<N>,
 {
 	if N::is_zero(&a) || N::is_zero(&b) { L::zero() } else { <L as From<N>>::from(a) / <L as From<N>>::from(b) } 
@@ -52,20 +52,20 @@ fn _loss<N, L>(a: N, b: N) -> L
 /// ```
 pub fn dynmsc<M, N, L>(
 	mat: &M,
-	med: &Vec<usize>,
+	med: &[usize],
 	mink: usize,
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize, Vec<usize>, Vec<L>)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N> + From<u32> + std::fmt::Debug,
 		M: ArrayAdapter<N>,
 {
-	let mut med = med.clone();
+	let mut med = med.to_owned();
 	let (n, mut k) = (mat.len(), med.len());
 	let minimum_k = min(max(mink, 1), k);
 	if k == 1 {
-		let mut return_loss = vec![L::zero(); 1 as usize];
+		let mut return_loss = vec![L::zero(); 1_usize];
 		let assi = vec![0; n];
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, &mut med, 0);
 		return_loss[0] = loss;
@@ -126,8 +126,8 @@ pub fn dynmsc<M, N, L>(
 			return_assi = assi;
 			return_meds = med.clone();
 		}
-		return_swaps = return_swaps + n_swaps;
-		return_iter = return_iter + iter;
+		return_swaps += n_swaps;
+		return_iter += iter;
 		loss = remove_med(mat, &mut med, &mut data, r.1);
 		removal_loss.remove(r.1);
 		k = med.len();
@@ -140,8 +140,8 @@ pub fn dynmsc<M, N, L>(
 			return_meds = med.clone();
 			return_assi = assi2;
 		}
-		return_swaps = return_swaps + n_swaps2;
-		return_iter = return_iter + iter2;
+		return_swaps += n_swaps2;
+		return_iter += iter2;
 	}
 	if minimum_k <= 1 {
 		return_loss[0] = L::zero();
@@ -161,7 +161,7 @@ pub(crate) fn update_third_nearest_without_new<M, N>(
 	o: usize,
 ) -> DistancePair<N>
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		M: ArrayAdapter<N>,
 {
 	let mut dist = DistancePair::new(b as u32, N::zero());
@@ -182,11 +182,11 @@ pub(crate) fn update_third_nearest_without_new<M, N>(
 pub(crate) fn remove_med<M, N, L>(
 	mat: &M,
 	med: &mut Vec<usize>,
-	data: &mut Vec<Reco<N>>,
+	data: &mut [Reco<N>],
 	b: usize,
 ) -> L
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
@@ -205,8 +205,8 @@ pub(crate) fn remove_med<M, N, L>(
 				if reco.third.i == l as u32 {
 					reco.third.i = b as u32;
 				}
-				reco.near = reco.seco;
-				reco.seco = reco.third;
+				reco.near = reco.seco.clone();
+				reco.seco = reco.third.clone();
 				reco.third = update_third_nearest_without_new(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o);
 			} else if reco.seco.i == b as u32 {
 				// second nearest is gone
@@ -216,7 +216,7 @@ pub(crate) fn remove_med<M, N, L>(
 				if reco.third.i == l as u32 {
 					reco.third.i = b as u32;
 				}
-				reco.seco = reco.third;
+				reco.seco = reco.third.clone();
 				reco.third = update_third_nearest_without_new(mat, med, reco.near.i as usize, reco.seco.i as usize, b, o);
 			} else if reco.third.i == b as u32 {
 				// third nearest is gone
@@ -238,7 +238,7 @@ pub(crate) fn remove_med<M, N, L>(
 					reco.third.i = b as u32;
 				}
 			}
-			_loss::<N, L>(reco.near.d, reco.seco.d)
+			_loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone())
 		})
 		.reduce(L::add)
 		.unwrap()

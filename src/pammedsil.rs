@@ -48,11 +48,11 @@ fn _loss<N, L>(a: N, b: N) -> L
 /// ```
 pub fn pammedsil_swap<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N> + std::convert::From<u32>,
 		M: ArrayAdapter<N>,
 {
@@ -90,7 +90,7 @@ pub fn pammedsil_swap<M, N, L>(
 /// ```
 pub fn pammedsil<M, N, L>(mat: &M, k: usize, maxiter: usize) -> (L, Vec<usize>, Vec<usize>, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N> + std::convert::From<u32>,
 		M: ArrayAdapter<N>,
 {
@@ -109,13 +109,13 @@ pub fn pammedsil<M, N, L>(mat: &M, k: usize, maxiter: usize) -> (L, Vec<usize>, 
 /// Main optimization function of PAMMEDSIL, not exposed (use pammedsil_swap or pammedsil)
 fn pammedsil_optimize<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
-	data: &mut Vec<Reco<N>>,
+	med: &mut [usize],
+	data: &mut [Reco<N>],
 	maxiter: usize,
 	mut loss: L,
 ) -> (L, Vec<usize>, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N> + std::convert::From<u32>,
 		M: ArrayAdapter<N>,
 {
@@ -165,14 +165,14 @@ fn pammedsil_optimize<M, N, L>(
 #[inline]
 fn find_best_swap_pammedsil<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>], j: usize) -> (L, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
 	let recj = &data[j];
 	let mut best = (L::zero(), usize::MAX);
 	for (m, _) in med.iter().enumerate() {
-		let mut acc: L = _loss::<N, L>(recj.near.d, recj.seco.d); // j becomes medoid
+		let mut acc: L = _loss::<N, L>(recj.near.d.clone(), recj.seco.d.clone()); // j becomes medoid
 		for (o, reco) in data.iter().enumerate() {
 			if o == j {
 				continue;
@@ -182,26 +182,26 @@ fn find_best_swap_pammedsil<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>], j
 			if reco.near.i as usize == m {
 				if doj < reco.seco.d {
 					// Assign to new medoid:
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.seco.d);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(doj, reco.seco.d.clone());
 				} else if doj < reco.third.d {
 					// Assign to second nearest instead:
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.seco.d, doj);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(reco.seco.d.clone(), doj);
 				} else {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.seco.d, reco.third.d);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(reco.seco.d.clone(), reco.third.d.clone());
 				}
 			} else if reco.seco.i as usize == m  {
 				if doj < reco.near.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(doj, reco.near.d.clone());
 				} else if doj < reco.third.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(reco.near.d.clone(), doj);
 				} else {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, reco.third.d);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(reco.near.d.clone(), reco.third.d.clone());
 				}
-			} else {
+			} else { #[allow(clippy::collapsible_else_if)]
 				if doj < reco.near.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(doj, reco.near.d.clone());
 				} else if doj < reco.seco.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(reco.near.d.clone(), doj);
 				}
 			}
 		}
@@ -216,14 +216,14 @@ fn find_best_swap_pammedsil<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>], j
 #[inline]
 fn find_best_swap_pammedsil_k2<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>], j: usize) -> (L, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
 	let recj = &data[j];
 	let mut best = (L::zero(), usize::MAX);
 	for (m, _) in med.iter().enumerate() {
-		let mut acc: L = _loss::<N, L>(recj.near.d, recj.seco.d); // j becomes medoid
+		let mut acc: L = _loss::<N, L>(recj.near.d.clone(), recj.seco.d.clone()); // j becomes medoid
 		for (o, reco) in data.iter().enumerate() {
 			if o == j {
 				continue;
@@ -233,22 +233,22 @@ fn find_best_swap_pammedsil_k2<M, N, L>(mat: &M, med: &[usize], data: &[Reco<N>]
 			if reco.near.i as usize == m {
 				if doj < reco.seco.d {
 					// Assign to new medoid:
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.seco.d);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(doj, reco.seco.d.clone());
 				} else {
 					// Assign to second nearest instead:
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.seco.d, doj);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(reco.seco.d.clone(), doj);
 				}
 			} else if reco.seco.i as usize == m  {
 				if doj < reco.near.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(doj, reco.near.d.clone());
 				} else {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(reco.near.d.clone(), doj);
 				}
-			} else {
+			} else { #[allow(clippy::collapsible_else_if)]
 				if doj < reco.near.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(doj, reco.near.d);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(doj, reco.near.d.clone());
 				} else if doj < reco.seco.d {
-					acc += _loss::<N, L>(reco.near.d, reco.seco.d) - _loss::<N, L>(reco.near.d, doj);
+					acc += _loss::<N, L>(reco.near.d.clone(), reco.seco.d.clone()) - _loss::<N, L>(reco.near.d.clone(), doj);
 				}
 			}
 		}
@@ -267,7 +267,7 @@ fn pammedsil_build_initialize<M, N, L>(
 	k: usize,
 ) -> L
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N>,
 		M: ArrayAdapter<N>,
 {
@@ -294,12 +294,12 @@ fn pammedsil_build_initialize<M, N, L>(
 	for l in 1..k {
 		best = (L::zero(), k);
 		for (i, _) in data.iter().enumerate().skip(1) {
-			let mut sum = -<L as From<N>>::from(data[i].near.d);
+			let mut sum = -<L as From<N>>::from(data[i].near.d.clone());
 			for (j, dj) in data.iter().enumerate() {
 				if j != i {
 					let d = mat.get(j, i);
 					if d < dj.near.d {
-						sum += <L as From<N>>::from(d) - <L as From<N>>::from(dj.near.d)
+						sum += <L as From<N>>::from(d) - <L as From<N>>::from(dj.near.d.clone())
 					}
 				}
 			}
@@ -312,23 +312,23 @@ fn pammedsil_build_initialize<M, N, L>(
 		loss = L::zero();
 		for (j, recj) in data.iter_mut().enumerate() {
 			if j == best.1 {
-				recj.third = recj.seco;
-				recj.seco = recj.near;
+				recj.third = recj.seco.clone();
+				recj.seco = recj.near.clone();
 				recj.near = DistancePair::new(l as u32, N::zero());
 			} else {
 				let dj = mat.get(j, best.1);
 				if dj < recj.near.d {
-					recj.third = recj.seco;
-					recj.seco = recj.near;
+					recj.third = recj.seco.clone();
+					recj.seco = recj.near.clone();
 					recj.near = DistancePair::new(l as u32, dj);
 				} else if recj.seco.i == u32::MAX || dj < recj.seco.d {
-					recj.third = recj.seco;
+					recj.third = recj.seco.clone();
 					recj.seco = DistancePair::new(l as u32, dj);
 				} else if recj.third.i == u32::MAX || dj < recj.third.d {
 					recj.third = DistancePair::new(l as u32, dj);
 				}
 			}
-			loss += _loss::<N, L>(recj.near.d, recj.seco.d);
+			loss += _loss::<N, L>(recj.near.d.clone(), recj.seco.d.clone());
 		}
 		meds.push(best.1);
 	}

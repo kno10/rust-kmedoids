@@ -39,8 +39,8 @@ use std::convert::From;
 /// ```
 pub fn alternating<M, N, L>(mat: &M, med: &mut [usize], maxiter: usize) -> (L, Vec<usize>, usize)
 where
-	N: Zero + PartialOrd + Copy,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+	N: Zero + PartialOrd + Clone,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let mut assi = vec![usize::MAX; mat.len()];
@@ -65,8 +65,8 @@ where
 #[allow(clippy::or_fun_call)] // zero() is fine
 pub(crate) fn assign_nearest<M, N, L>(mat: &M, med: &[usize], data: &mut [usize]) -> L
 where
-	N: PartialOrd + Copy,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+	N: PartialOrd + Clone,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let n = mat.len();

@@ -1,5 +1,11 @@
 # Changelog
 
+## kmedoids 0.5.2 (2024-09-10)
+
+- use Clone instead of Copy to better support arbitrary precision
+- resolve some clippy warnings
+- bump ndarray version (no changes)
+
 ## kmedoids 0.5.1 (2024-03-14)
 
 - DynMSC: best loss reported incorrectly if best k=2

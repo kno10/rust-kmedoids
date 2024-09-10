@@ -36,17 +36,17 @@ use std::convert::From;
 /// ```
 pub fn pamsil_swap<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
+		N: Zero + PartialOrd + Clone,
 		L: Float + Signed + AddAssign + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
 	let n = mat.len();
 	let mut assi = vec![0; n];
-	assign_nearest::<M, N, L>(mat, &med, &mut assi);
+	assign_nearest::<M, N, L>(mat, med, &mut assi);
 	let (nloss, n_iter, n_swap) = pamsil_optimize(mat, med, &mut assi, maxiter);
 	(nloss, assi, n_iter, n_swap)
 }
@@ -81,8 +81,8 @@ pub fn pamsil_swap<M, N, L>(
 /// ```
 pub fn pamsil<M, N, L>(mat: &M, k: usize, maxiter: usize) -> (L, Vec<usize>, Vec<usize>, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
-		L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + From<u32>,
+		N: Zero + PartialOrd + Clone,
+		L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -100,22 +100,22 @@ pub fn pamsil<M, N, L>(mat: &M, k: usize, maxiter: usize) -> (L, Vec<usize>, Vec
 /// Main optimization function of PAMSIL, not exposed (use pamsil_swap or pamsil)
 fn pamsil_optimize<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
-	assi: &mut Vec<usize>,
+	med: &mut [usize],
+	assi: &mut [usize],
 	maxiter: usize,
 ) -> (L, usize, usize)
 	where
-		N: Zero + PartialOrd + Copy,
-		L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N> + From<u32>,
+		N: Zero + PartialOrd + Clone,
+		L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N> + From<u32>,
 		M: ArrayAdapter<N>,
 {
 	let (n, k) = (mat.len(), med.len());
 	if k == 1 {
-		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
+		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, assi, med, 0);
 		return (loss, 1, if swapped { 1 } else { 0 });
 	}
 	let (mut n_swaps, mut iter) = (0, 0);
-	let (mut sil, _): (L, _) = silhouette::<M, N, L>(&mat, &assi, false);
+	let (mut sil, _): (L, _) = silhouette::<M, N, L>(mat, assi, false);
 	while iter < maxiter {
 		iter += 1;
 		let mut best = (L::zero(), k, usize::MAX);
@@ -126,8 +126,8 @@ fn pamsil_optimize<M, N, L>(
 					continue; // This already is a medoid
 				}
 				med[m] = j; // replace
-				assign_nearest::<M, N, L>(mat, &med, assi);
-				let (siltemp, _): (L, _) = silhouette::<M, N, L>(&mat, &assi, false);
+				assign_nearest::<M, N, L>(mat, med, assi);
+				let (siltemp, _): (L, _) = silhouette::<M, N, L>(mat, assi, false);
 				if siltemp <= best.0 {
 					continue; // No improvement
 				}
@@ -142,7 +142,7 @@ fn pamsil_optimize<M, N, L>(
 		med[best.1] = best.2;
 		sil = best.0;
 	}
-	assign_nearest::<M, N, L>(mat, &med, assi);
+	assign_nearest::<M, N, L>(mat, med, assi);
 	(sil, iter, n_swaps)
 }
 
@@ -150,12 +150,12 @@ fn pamsil_optimize<M, N, L>(
 fn pamsil_build_initialize<M, N, L>(
 	mat: &M,
 	meds: &mut Vec<usize>,
-	assi: &mut Vec<usize>,
+	assi: &mut [usize],
 	k: usize,
 ) -> L
 	where
-		N: Zero + PartialOrd + Copy,
-		L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+		N: Zero + PartialOrd + Clone,
+		L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 		M: ArrayAdapter<N>,
 {
 	let n = mat.len();
@@ -183,12 +183,12 @@ fn pamsil_build_initialize<M, N, L>(
 	for _ in 1..k {
 		best = (L::zero(), k);
 		for (i, di) in data.iter().enumerate() {
-			let mut sum = -L::from(*di);
+			let mut sum = -L::from(di.clone());
 			for (j, dnear) in data.iter().enumerate() {
 				if j != i {
 					let d = mat.get(j, i);
 					if d < *dnear {
-						sum += L::from(d) - L::from(*dnear)
+						sum += L::from(d) - L::from(dnear.clone())
 					}
 				}
 			}
@@ -208,7 +208,7 @@ fn pamsil_build_initialize<M, N, L>(
 			if dj < *dnear {
 				*dnear = dj;
 			}
-			loss += L::from(*dnear);
+			loss += L::from(dnear.clone());
 		}
 		meds.push(best.1);
 	}

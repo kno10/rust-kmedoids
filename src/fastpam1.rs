@@ -41,12 +41,12 @@ use std::convert::From;
 /// ```
 pub fn fastpam1<M, N, L>(
 	mat: &M,
-	med: &mut Vec<usize>,
+	med: &mut [usize],
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Copy,
-	L: AddAssign + Signed + Zero + PartialOrd + Copy + From<N>,
+	N: Zero + PartialOrd + Clone,
+	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
 {
 	let (n, k) = (mat.len(), med.len());

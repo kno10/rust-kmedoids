@@ -18,7 +18,7 @@ pub trait ArrayAdapter<N> {
 impl<A, N> ArrayAdapter<N> for ndarray::ArrayBase<A, ndarray::Ix2>
 where
 	A: ndarray::Data<Elem = N>,
-	N: Copy,
+	N: Clone,
 {
 	#[inline]
 	fn len(&self) -> usize {
@@ -30,7 +30,7 @@ where
 	}
 	#[inline]
 	fn get(&self, x: usize, y: usize) -> N {
-		self[[x, y]]
+		self[[x, y]].clone()
 	}
 }
 
@@ -51,7 +51,7 @@ pub struct LowerTriangle<N> {
 	pub data: Vec<N>,
 }
 /// Adapter implementation for LowerTriangle
-impl<N: Copy + num_traits::Zero> ArrayAdapter<N> for LowerTriangle<N> {
+impl<N: Clone + num_traits::Zero> ArrayAdapter<N> for LowerTriangle<N> {
 	#[inline]
 	fn len(&self) -> usize {
 		self.n
@@ -63,8 +63,8 @@ impl<N: Copy + num_traits::Zero> ArrayAdapter<N> for LowerTriangle<N> {
 	#[inline]
 	fn get(&self, x: usize, y: usize) -> N {
 		match x.cmp(&y) {
-			std::cmp::Ordering::Less => self.data[((y * (y - 1)) >> 1) + x],
-			std::cmp::Ordering::Greater => self.data[((x * (x - 1)) >> 1) + y],
+			std::cmp::Ordering::Less => self.data[((y * (y - 1)) >> 1) + x].clone(),
+			std::cmp::Ordering::Greater => self.data[((x * (x - 1)) >> 1) + y].clone(),
 			std::cmp::Ordering::Equal => N::zero(),
 		}
 	}
