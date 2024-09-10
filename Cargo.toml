@@ -29,12 +29,12 @@ required-features = ["ndarray", "rand", "parallel"]
 
 [dependencies]
 num-traits = "0.2"
-ndarray = {version = "0.16", optional = true}
+ndarray = {version = "0.15", optional = true}
 rand  = {version = "0.8", optional = true}
 rayon = {version = "1.10", optional = true}
 
 [dev-dependencies]
-ndarray = "0.16"
+ndarray = "0.15"
 rand  = "0.8"
 byteorder = "1.5" # for mnist-kmedoids
 
