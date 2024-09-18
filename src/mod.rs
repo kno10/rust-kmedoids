@@ -28,37 +28,56 @@
 //! let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 100);
 //! println!("Loss is: {}", loss);
 //! ```
-mod alternating;
-pub mod arrayadapter;
-mod fasterpam;
-mod fastpam1;
-mod fastmsc;
-mod fastermsc;
-mod dynmsc;
 mod initialization;
-mod pam;
-mod pamsil;
-mod pammedsil;
+pub mod arrayadapter;
+mod silhouette;
+mod alternating;
+mod util;
+#[cfg(feature = "FasterPAM")]
+mod fasterpam;
+#[cfg(feature = "FasterMSC")]
+mod fastermsc;
+#[cfg(feature = "DynMSC")]
+mod dynmsc;
 #[cfg(feature = "parallel")]
 mod par_fasterpam;
 #[cfg(feature = "parallel")]
 mod par_silhouette;
-mod silhouette;
-mod util;
 
-pub use crate::alternating::*;
-pub use crate::arrayadapter::ArrayAdapter;
-pub use crate::fasterpam::*;
-pub use crate::fastpam1::*;
-pub use crate::fastmsc::*;
-pub use crate::fastermsc::*;
-pub use crate::dynmsc::*;
+#[cfg(feature = "FastPAM1")]
+mod fastpam1;
+#[cfg(feature = "FastMSC")]
+mod fastmsc;
+#[cfg(feature = "PAM")]
+mod pam;
+#[cfg(feature = "PAMSIL")]
+mod pamsil;
+#[cfg(feature = "PAMMEDSIL")]
+mod pammedsil;
+
 pub use crate::initialization::*;
-pub use crate::pam::*;
-pub use crate::pamsil::*;
-pub use crate::pammedsil::*;
+pub use crate::arrayadapter::ArrayAdapter;
+pub use crate::silhouette::*;
+pub use crate::alternating::*;
+
+#[cfg(feature = "FasterPAM")]
+pub use crate::fasterpam::*;
+#[cfg(feature = "FasterMSC")]
+pub use crate::fastermsc::*;
+#[cfg(feature = "DynMSC")]
+pub use crate::dynmsc::*;
 #[cfg(feature = "parallel")]
 pub use crate::par_fasterpam::*;
 #[cfg(feature = "parallel")]
 pub use crate::par_silhouette::*;
-pub use crate::silhouette::*;
+
+#[cfg(feature = "FastPAM1")]
+pub use crate::fastpam1::*;
+#[cfg(feature = "FastMSC")]
+pub use crate::fastmsc::*;
+#[cfg(feature = "PAM")]
+pub use crate::pam::*;
+#[cfg(feature = "PAMSIL")]
+pub use crate::pamsil::*;
+#[cfg(feature = "PAMMEDSIL")]
+pub use crate::pammedsil::*;

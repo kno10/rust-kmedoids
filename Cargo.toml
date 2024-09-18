@@ -17,16 +17,6 @@ path = "src/mod.rs"
 test = true
 doc = true
 
-[[example]]
-name = "orlib-kmedoids"
-path = "examples/orlib-kmedoids.rs"
-required-features = ["ndarray", "rand", "parallel"]
-
-[[example]]
-name = "mnist-kmedoids"
-path = "examples/mnist-kmedoids.rs"
-required-features = ["ndarray", "rand", "parallel"]
-
 [dependencies]
 num-traits = "0.2"
 ndarray = {version = "0.15", optional = true}
@@ -39,8 +29,34 @@ rand  = "0.8"
 byteorder = "1.5" # for mnist-kmedoids
 
 [features]
-default = ["rand", "ndarray", "parallel"]
+FasterPAM = []
+FasterMSC = []
+DynMSC = []
+
+FastPAM1 = []
+FastMSC = []
+PAM = []
+PAMSIL = []
+PAMMEDSIL = []
+
+default = ["rand", "ndarray", "parallel", "FasterPAM", "FasterMSC", "DynMSC"]
 parallel = ["rand", "ndarray", "rayon"]
+all = ["default", "FastPAM1", "FastMSC", "PAM", "PAMSIL", "PAMMEDSIL"]
+
 # Enable additional assertions
 assertions = []
 
+[[example]]
+name = "orlib-kmedoids"
+path = "examples/orlib-kmedoids.rs"
+required-features = ["all"]
+
+[[example]]
+name = "mnist-kmedoids"
+path = "examples/mnist-kmedoids.rs"
+required-features = ["all"]
+
+[[bench]]
+name = "bench"
+path = "benches/bench.rs"
+required-features = ["all"]
