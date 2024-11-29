@@ -44,6 +44,7 @@ mod par_fasterpam;
 #[cfg(feature = "parallel")]
 mod par_silhouette;
 mod silhouette;
+mod labeledpam;
 mod util;
 
 pub use crate::alternating::*;
@@ -62,3 +63,4 @@ pub use crate::par_fasterpam::*;
 #[cfg(feature = "parallel")]
 pub use crate::par_silhouette::*;
 pub use crate::silhouette::*;
+pub use crate::labeledpam::*;

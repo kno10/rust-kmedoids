@@ -34,6 +34,31 @@ where
 	}
 }
 
+#[allow(clippy::len_without_is_empty)]
+pub trait LabelAdapter<N> {
+	/// Get the length of an array structure
+	fn len(&self) -> usize;
+	/// Get the contents at cell x,y
+	fn get(&self, x: usize) -> N;
+}
+
+/// Adapter trait for using `ndarray::Array2` and similar
+#[cfg(feature = "ndarray")]
+impl<A, N> LabelAdapter<N> for ndarray::ArrayBase<A, ndarray::Ix1>
+where
+	A: ndarray::Data<Elem = N>,
+	N: Clone,
+{
+	#[inline]
+	fn len(&self) -> usize {
+		self.shape()[0]
+	}
+	#[inline]
+	fn get(&self, x: usize) -> N {
+		self[[x]].clone()
+	}
+}
+
 /// Lower triangular matrix in serial form (without diagonal)
 ///
 /// ## Example
