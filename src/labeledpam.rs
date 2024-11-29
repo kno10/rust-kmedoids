@@ -345,7 +345,7 @@ where
 #[cfg(test)]
 mod tests {
 	// TODO: use a larger, much more interesting example.
-	use crate::{arrayadapter::LowerTriangle, labeledpam, silhouette, util::assert_array};
+	use crate::{arrayadapter::LowerTriangle, labeledpam, silhouette, util::assert_array, arrayadapter::LabelList};
 
 	#[test]
 	fn testlabeledpam_simple() {
@@ -353,7 +353,9 @@ mod tests {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
-		let labels = vec![0, 0, 0, 1, 1];
+		let labels = LabelList{
+			data: vec![0, 0, 0, 1, 1],
+		};
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = labeledpam(&data, &labels, &mut meds, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
@@ -371,7 +373,9 @@ mod tests {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
-		let labels = vec![0, 0, 0, 1, 1];
+		let labels = LabelList{
+			data: vec![0, 0, 0, 1, 1],
+		};
 		let mut meds = vec![1]; // So we need one swap
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = labeledpam(&data, &labels, &mut meds, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
@@ -394,7 +398,9 @@ mod tests {
 			n: 5,
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
 		};
-		let labels = vec![0, 0, 0, 1, 1];
+		let labels = LabelList{
+			data: vec![0, 0, 0, 1, 1],
+		};
 		let mut meds = vec![0, 1];
 		let mut rng = StdRng::seed_from_u64(1);
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) =
