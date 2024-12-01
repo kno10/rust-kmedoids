@@ -1,7 +1,9 @@
 use crate::arrayadapter::ArrayAdapter;
 use crate::arrayadapter::LabelAdapter;
 use crate::util::*;
+use crate::labeltraits::*;
 use core::ops::AddAssign;
+use num_traits::One;
 use num_traits::{Signed, Zero};
 use std::convert::From;
 
@@ -37,26 +39,29 @@ use std::convert::From;
 /// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 100);
 /// println!("Loss is: {}", loss);
 /// ```
-pub fn labeledpam<M, N, L,O>(
+pub fn labeledpam<M, N, L,C, O>(
 	mat: &M,
 	labels: &O,
 	med: &mut [usize],
+	no_labels: usize,
 	maxiter: usize,
 ) -> (L, Vec<usize>, usize, usize)
 where
 	N: Zero + PartialOrd + Clone,
 	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N> + Copy,
 	M: ArrayAdapter<N>,
-	O: LabelAdapter<usize>,
+	C: Zero + One + Signed + PartialOrd + Clone + Copy + IntoIndex +  FromIndex,
+	O: LabelAdapter<C>,
 {
-	let (n, k, l) = (mat.len(), med.len(), labels.len());
-	assert!(l<k, "Too many labels for the number of medoids");
+	let (n, k) = (mat.len(), med.len());
+	assert!(mat.len() == labels.len(), "Labels and matrix must have the same length");
+	assert!(no_labels <= k, "Too many labels {} for the number of medoids {}", no_labels, k);
 	if k == 1 {
 		let assi = vec![0; n];
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
 		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
-	let mut cluster_records = CluRec::<usize>::new(med, l);
+	let mut cluster_records = CluRec::<C>::new(med, no_labels);
 	let (mut loss, mut data): (L, Vec<Rec<N>>) = initial_assignment(mat, labels, &mut cluster_records);
 	debug_assert_assignment(mat, &cluster_records.meds, &data);
 	let mut removal_loss = vec![L::zero(); k];
@@ -93,12 +98,13 @@ where
 
 /// Perform the initial assignment to medoids
 #[inline]
-pub(crate) fn initial_assignment<M, N, L, O>(mat: &M, labels: &O, cluster_records: &mut CluRec<usize>) -> (L, Vec<Rec<N>>)
+pub(crate) fn initial_assignment<M, N, L, C, O>(mat: &M, labels: &O, cluster_records: &mut CluRec<C>) -> (L, Vec<Rec<N>>)
 where
 	N: Zero + PartialOrd + Clone,
 	L: AddAssign + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
-	O: LabelAdapter<usize>,
+	C: Zero + One + Signed + PartialOrd + Clone + IntoIndex,
+	O: LabelAdapter<C>,
 {
 	let (n, k) = (mat.len(), cluster_records.len());
 	assert!(mat.is_square(), "Dissimilarity matrix is not square");
@@ -117,15 +123,16 @@ where
 					continue;
 				}
 				let d = mat.get(i, me);
-				if i == me || (d < cur.near.d && is_valid_pair(i, labels, m, cluster_records)) {
+				if i == me || ((d < cur.near.d || cur.near.i == u32::MAX) && is_valid_pair(i, labels, m, cluster_records)) {
 					cur.seco = cur.near.clone();
 					cur.near = DistancePair { i: m as u32, d };
 				} else if cur.seco.i == u32::MAX || d < cur.seco.d {
 					cur.seco = DistancePair { i: m as u32, d };
 				}
-				if labels.get(i)!=0{
-					cluster_records.label_counts[cur.near.i as usize] += 1;
-				}
+			}
+			debug_assert!(cur.near.i != u32::MAX, "No medoid found for object {}", i);
+			if labels.get(i)>= C::zero(){
+				cluster_records.label_counts[cur.near.i as usize] += 1;
 			}
 			L::from(cur.near.d.clone())
 		})
@@ -137,29 +144,31 @@ where
 
 /// Find the best swap for object j - FastPAM version
 #[inline]
-pub(crate) fn find_best_swap<M, N, L, O>(
+pub(crate) fn find_best_swap<M, N, L, C, O>(
 	mat: &M,
 	labels: &O,
 	removal_loss: &[L],
 	data: &[Rec<N>],
-	cluster_records: &CluRec<usize>,
+	cluster_records: &CluRec<C>,
 	j: usize,
-) -> (usize, usize, L)
+) -> (usize, C, L)
 where
 	N: Zero + PartialOrd + Clone,
 	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N> + Copy,
 	M: ArrayAdapter<N>,
-	O: LabelAdapter<usize>,
+	C: Zero + One + Signed + PartialOrd + Clone + Copy + IntoIndex + FromIndex,
+	O: LabelAdapter<C>,
 {
 	let j_label = labels.get(j);
 	let mut ploss = removal_loss.to_vec();
 	let mut closs = vec![L::zero(); cluster_records.len()];
-	let mut acc = vec![L::zero(); cluster_records.no_labels()];
+	let mut acc = L::zero();
+	let mut cacc = vec![L::zero(); cluster_records.no_labels()];
 	for (o, reco) in data.iter().enumerate() {
         let o_label = labels.get(o);
 
 		// Skip object and medoid are not label compatible
-		if !(j_label == o_label || j_label == 0 || o_label == 0){
+		if !(j_label == o_label || j_label < C::zero() || o_label < C::zero()){
 			continue;
 		}
 		let sec_valid = reco.seco.i != u32::MAX;
@@ -167,15 +176,16 @@ where
 		// there is an alternative medoid for o
 		if sec_valid {
 			if doj < reco.near.d {
-				if o_label != 0 {
+				if o_label >= C::zero() {
+					cacc[o_label.into_index()] += L::from(doj) - L::from(reco.near.d.clone());
 					closs[reco.near.i as usize] += L::from(reco.near.d.clone()) - L::from(reco.seco.d.clone());
 				} else {
+					acc += L::from(doj) - L::from(reco.near.d.clone());
 					ploss[reco.near.i as usize] += L::from(reco.near.d.clone()) - L::from(reco.seco.d.clone());
 				}
-				acc[o_label] += L::from(doj) - L::from(reco.near.d.clone());
 			} else if doj < reco.seco.d {
 				// object with label
-				if o_label != 0 {
+				if o_label >= C::zero() {
 					closs[reco.near.i as usize] += L::from(doj) - L::from(reco.seco.d.clone());
 				} else {
 					ploss[reco.near.i as usize] += L::from(doj) - L::from(reco.seco.d.clone());
@@ -187,21 +197,22 @@ where
 
 			if benefit < L::zero() {
 				ploss[reco.near.i as usize] += benefit;
-				acc[o_label] += benefit;
+				cacc[o_label.into_index()] += benefit;
 			} else {
 				ploss[reco.near.i as usize] += L::from(doj.clone());
 			}
 		}
 	}
-	return find_color_min(j, j_label, cluster_records, &mut ploss, &closs, &acc);
+	return find_color_min(j, j_label, cluster_records, &mut ploss, &closs, acc, &cacc);
 }
 
 /// Update the loss when removing each medoid
-pub(crate) fn update_removal_loss<N, L, M,  O>(data: &mut [Rec<N>], loss: &mut [L], mat: &M, labels: &O, cluster_records: &mut CluRec<usize>)
+pub(crate) fn update_removal_loss<N, L, M, C, O>(data: &mut [Rec<N>], loss: &mut [L], mat: &M, labels: &O, cluster_records: &mut CluRec<C>)
 where
 	N: Zero + PartialOrd + Clone,
 	L: AddAssign + Signed + Clone + Zero + From<N>,
-	O: LabelAdapter<usize>,
+	C: Zero + One + Signed +  PartialOrd + Clone + IntoIndex,
+	O: LabelAdapter<C>,
 	M: ArrayAdapter<N>,
 {
 	loss.fill(L::zero()); // stable since 1.50
@@ -221,9 +232,9 @@ where
 /// Update the second nearest medoid information
 /// Called after each swap.
 #[inline]
-pub(crate) fn update_second_nearest<M, N, O>(
+pub(crate) fn update_second_nearest<M, N, C, O>(
 	mat: &M,
-	cluster_records: &CluRec<usize>,
+	cluster_records: &CluRec<C>,
 	labels: &O,
 	n: usize,
 	b: usize,
@@ -233,14 +244,15 @@ pub(crate) fn update_second_nearest<M, N, O>(
 where
 	N: Zero + PartialOrd + Clone,
 	M: ArrayAdapter<N>,
-	O: LabelAdapter<usize>,
+	C: Zero +  One + Signed + PartialOrd + Clone + IntoIndex,
+	O: LabelAdapter<C>,
 {
 	// alternatively make sure that doj is 0 when b invalid?
-	let mut s = DistancePair::new(b as u32,if b == u32::MAX as usize {
-			 N::zero()} 
-		else {
-			doj.clone()
-		});
+	let mut s = if b == u32::MAX as usize{
+									DistancePair::empty()
+								} else {
+									DistancePair::new(b as u32, doj.clone())
+								};
 	for (i, &mi) in cluster_records.meds.iter().enumerate() {
 		if i == n || i == b || !is_valid_sec_pair(o, labels, i, cluster_records){
 			continue;
@@ -255,20 +267,21 @@ where
 
 /// Perform a single swap
 #[inline]
-pub(crate) fn do_swap<M, N, L, O>(
+pub(crate) fn do_swap<M, N, L, C, O>(
 	mat: &M,
 	labels: &O,
 	data: &mut [Rec<N>], 
-	cluster_records: &mut CluRec<usize>,
+	cluster_records: &mut CluRec<C>,
 	j: usize,
 	b: usize, 
-	l: usize,
+	l: C,
 ) -> L
 where
 	N: Zero + PartialOrd + Clone,
 	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
 	M: ArrayAdapter<N>,
-	O: LabelAdapter<usize>,
+	C: Zero + Signed + PartialOrd + Clone + IntoIndex,
+	O: LabelAdapter<C>,
 {
 	let n = mat.len();
 	assert!(b < cluster_records.meds.len(), "invalid medoid number");
@@ -281,7 +294,7 @@ where
 			// new medoid
 			if o == j {
 				if reco.near.i != b as u32 {
-					if labels.get(j) != 0 {
+					if labels.get(j) >= C::zero() {
 						cluster_records.label_counts[reco.near.i as usize] -= 1;
 						cluster_records.label_counts[b] += 1;
 					}
@@ -298,7 +311,7 @@ where
 				if doj < reco.seco.d || reco.seco.i == u32::MAX{
 					reco.near = DistancePair::new(b as u32, doj);
 				} else {
-					if obj_color != 0 {
+					if obj_color >= C::zero() {
 						cluster_records.label_counts[reco.near.i as usize] -= 1;
 						cluster_records.label_counts[b] += 1;
 					}
@@ -308,7 +321,7 @@ where
 			} else {
 				// nearest not removed
 				if doj < reco.near.d && valid_pair{
-					if obj_color != 0 {
+					if obj_color >= C::zero() {
 						cluster_records.label_counts[reco.near.i as usize] -= 1;
 						cluster_records.label_counts[b] += 1;
 					}
@@ -330,40 +343,42 @@ where
 }
 
 #[inline]
-pub(crate)  fn is_valid_pair<O>(obj:usize, labels:&O, med:usize, cluster_records: &CluRec<usize>) -> bool
+pub(crate)  fn is_valid_pair<O, C>(obj:usize, labels:&O, med:usize, cluster_records: &CluRec<C>) -> bool
 where 
-	O: LabelAdapter<usize>
+	C: Zero + Signed + PartialOrd + Clone + IntoIndex,
+	O: LabelAdapter<C>,
 {
-	if labels.get(obj) == 0 || labels.get(obj) == cluster_records.clus_labels[med]{
+	if labels.get(obj) < C::zero() || labels.get(obj) == cluster_records.clus_labels[med]{
 		return true
 	}
 	return false
 }
 
 #[inline]
-pub(crate) fn is_valid_sec_pair<O>(obj:usize, labels:&O, med:usize, cluster_records: &CluRec<usize>) -> bool
+pub(crate) fn is_valid_sec_pair<O, C>(obj:usize, labels:&O, med:usize, cluster_records: &CluRec<C>) -> bool
 where 
-	O: LabelAdapter<usize>
+	C: Zero + Signed + PartialOrd + Clone + IntoIndex,
+	O: LabelAdapter<C>,
 {
 	if cluster_records.label_counts[med] == 0{
 		return true
 	} 
-	if labels.get(obj) == 0 || labels.get(obj) == cluster_records.clus_labels[med]{
+	if labels.get(obj) < C::zero() || labels.get(obj) == cluster_records.clus_labels[med]{
 		return true
 	}
 	return false
 }
 
 #[inline]
-pub(crate) fn can_uncolor<>(cluster_records: &CluRec<usize>, label:usize) -> bool
+pub(crate) fn can_uncolor<C: Zero + Signed + PartialOrd + Clone + IntoIndex>(cluster_records: &CluRec<C>, label:C) -> bool
 {
 	if cluster_records.len() == cluster_records.no_labels(){
 		return false;
 	}
-	if cluster_records.clusters_per_label[label] > 1{
+	if cluster_records.clusters_per_label[label.into_index()] > 1{
 		return true;
 	}
-	return cluster_records.clusters_per_label[0] > 0;
+	return cluster_records.unlabeled_clusters > 0;
 }
 
 #[cfg(test)]
@@ -375,13 +390,13 @@ mod tests {
 	fn testlabeledpam_simple() {
 		let data = LowerTriangle {
 			n: 5,
-			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
+			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 		};
 		let labels = LabelList{
-			data: vec![0, 0, 0, 1, 1],
+			data: vec![0, 1, -1,-1,-1],
 		};
 		let mut meds = vec![0, 1];
-		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = labeledpam(&data, &labels, &mut meds, 10);
+		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = labeledpam(&data, &labels, &mut meds, 2, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 2, "swaps not as expected");
@@ -395,13 +410,13 @@ mod tests {
 	fn testlabeledpam_single_cluster() {
 		let data = LowerTriangle {
 			n: 5,
-			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 1],
+			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 		};
 		let labels = LabelList{
-			data: vec![0, 0, 0, 1, 1],
+			data: vec![0, 0, -1,-1,-1],
 		};
 		let mut meds = vec![1]; // So we need one swap
-		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = labeledpam(&data, &labels, &mut meds, 10);
+		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = labeledpam(&data, &labels, &mut meds, 1, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 14, "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");

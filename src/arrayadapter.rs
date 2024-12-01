@@ -2,6 +2,10 @@
 //!
 //! Includes adapters for `ndarray::Array2` and a serialized lower triangular matrix in a `Vec`.
 
+use num_traits::{One, Signed, Zero};
+
+use crate::labeltraits::{FromIndex, IntoIndex};
+
 /// Adapter trait for accessing different types of arrays
 #[allow(clippy::len_without_is_empty)]
 pub trait ArrayAdapter<N> {
@@ -99,7 +103,7 @@ pub struct LabelList<N> {
 	pub data: Vec<N>,
 }
 
-impl <N: Clone + num_traits::Zero> LabelAdapter<N> for LabelList<N> {
+impl <N: Zero + One + Signed + PartialOrd + Clone + Copy + IntoIndex +  FromIndex> LabelAdapter<N> for LabelList<N> {
 	#[inline]
 	fn len(&self) -> usize {
 		self.data.len()

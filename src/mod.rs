@@ -45,6 +45,7 @@ mod par_fasterpam;
 mod par_silhouette;
 mod silhouette;
 mod labeledpam;
+pub mod labeltraits;
 mod util;
 
 pub use crate::alternating::*;
