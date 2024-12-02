@@ -61,7 +61,7 @@ where
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
 		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
-	let mut cluster_records = CluRec::<C>::new(med, no_labels);
+	let mut cluster_records = CluRec::<C>::new(med, labels, no_labels);
 	let (mut loss, mut data): (L, Vec<Rec<N>>) = initial_assignment(mat, labels, &mut cluster_records);
 	debug_assert_assignment(mat, &cluster_records.meds, &data);
 	let mut removal_loss = vec![L::zero(); k];
@@ -109,7 +109,7 @@ where
 	let (n, k) = (mat.len(), cluster_records.len());
 	assert!(mat.is_square(), "Dissimilarity matrix is not square");
 	assert!(n <= u32::MAX as usize, "N is too large");
-	assert!(k > 0 && k < u32::MAX as usize, "invalid N");
+	assert!(k > 0 && k < u32::MAX as usize, "invalid K");
 	assert!(k <= n, "k must be at most N");
 	let mut data = vec![Rec::<N>::empty(); mat.len()];
 
@@ -393,9 +393,9 @@ mod tests {
 			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 		};
 		let labels = LabelList{
-			data: vec![0, 1, -1,-1,-1],
+			data: vec![0, 1, -1, 0,1],
 		};
-		let mut meds = vec![0, 1];
+		let mut meds = vec![0, 1, 2];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = labeledpam(&data, &labels, &mut meds, 2, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 4, "loss not as expected");

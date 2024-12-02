@@ -1,4 +1,4 @@
-use crate::{arrayadapter::ArrayAdapter, can_uncolor, labeltraits::{FromIndex, IntoIndex}};
+use crate::{arrayadapter::{ArrayAdapter, LabelAdapter}, can_uncolor, labeltraits::{FromIndex, IntoIndex}};
 use core::ops::AddAssign;
 use num_traits::{One, Signed, Zero};
 
@@ -61,12 +61,21 @@ where
 
 impl<'a, N:Zero + Signed + PartialOrd + Clone + IntoIndex> CluRec<'a, N> 
 {
-	pub(crate) fn new(meds: &mut [usize], label_count:usize) -> CluRec<N>
+	pub(crate) fn new(meds: &'a mut [usize], labels: &dyn LabelAdapter<N>, label_count:usize) -> CluRec<'a, N>
 	{
 		let meds_len = meds.len();
+		let clus_labels:Vec<N> = meds.iter().map(|m|{
+			let l = labels.get(*m);
+			if l >= N::zero() {
+				l} 
+			else {
+				N::zero()
+			}
+		}).collect();
+
 		CluRec {
 			meds,
-			clus_labels: vec![N::zero(); meds_len],
+			clus_labels: clus_labels,
 			label_counts: vec![usize::zero(); meds_len],
 			clusters_per_label: vec![usize::zero(); label_count],
 			unlabeled_clusters: 0,
@@ -210,6 +219,7 @@ pub(crate) fn find_color_min<'a, L, C>(j:usize, j_label:C, cluster_records:&CluR
 		} else {
 			// cluster can not be relabeled
 			// cluster can not be unlabeled
+			debug_assert!(cluster_label >= C::zero(), "Cluster label is negative");
 			let temp_loss = *i_loss + closs[i] + acc + cacc[cluster_label.into_index()];
 			if temp_loss < loss {
 				loss = temp_loss;
