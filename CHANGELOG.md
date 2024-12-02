@@ -1,5 +1,10 @@
 # Changelog
 
+## kmedoids 0.5.3 (2024-12-02)
+
+- no functionality changes
+- bump ndarray version for Python 3.13 / numpy 2.0 support
+
 ## kmedoids 0.5.2 (2024-09-10)
 
 - use Clone instead of Copy to better support arbitrary precision
