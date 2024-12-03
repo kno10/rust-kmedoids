@@ -1,4 +1,4 @@
-use std::{fmt::Display, ops::AddAssign};
+use std::{fmt::Display, fmt::Debug, ops::AddAssign};
 
 use num_traits::{AsPrimitive, One, Signed, Zero};
 
@@ -15,7 +15,7 @@ macro_rules! trait_combiner {
         impl<T: $t $(+ $ts)*> $combination_name for T {}
     };
 }
-trait_combiner!(Label: Zero + One + Signed + Max + PartialOrd + Clone + Copy + IntoIndex + FromIndex + Display);
+trait_combiner!(Label: Zero + One + Signed + Max + PartialOrd + Clone + Copy + IntoIndex + FromIndex + Debug + Display);
 
 pub trait Max {
     const MAX: Self;
@@ -94,17 +94,11 @@ impl<'a, N:Label> CluRec<'a, N>
 	{
 		let meds_len = meds.len();
 		let clus_labels:Vec<N> = meds.iter().map(|m|{
-			let l = labels.get(*m);
-			if l >= N::zero() {
-				l} 
-			else {
-				N::zero()
-			}
+			labels.get(*m)
 		}).collect();
-
 		let mut clu_rec = CluRec {
 			meds,
-			clus_labels: clus_labels,
+			clus_labels,
 			label_counts: vec![usize::zero(); meds_len],
 			clusters_per_label: vec![usize::zero(); label_count],
 			unlabeled_clusters: 0,
@@ -121,16 +115,37 @@ impl<'a, N:Label> CluRec<'a, N>
 		self.clusters_per_label.len()
 	}
 
+	// update all the label information for the clusters
+	pub(crate) fn update_labels(&mut self){
+		// reset labels if no labeled point is present
+		for (i, l) in self.clus_labels.iter_mut().enumerate(){
+			if self.label_counts[i] == 0{
+				*l = -N::one();
+			}
+		}
+		self.update_cluster_per_label()
+	}
+
+	// update the number of clusters per label
 	pub(crate) fn update_cluster_per_label(&mut self){
 		self.clusters_per_label.fill(0);
 		self.unlabeled_clusters = 0;
 		for label in self.clus_labels.iter(){
-			if label > &N::zero(){
+			if label >= &N::zero(){
 				self.clusters_per_label[label.clone().into_index()] += 1;
 			} else {
 				self.unlabeled_clusters += 1;
 			}
 		}
+	}
+}
+
+impl <'a, N> Display for CluRec<'a, N>
+where
+	N: Label,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "CluRec:\n medoids: {:?},\n clu_lab: {:?},\n lab_cnt: {:?},\n cl_p_la: {:?},\n unl_clu: {}", self.meds, self.clus_labels, self.label_counts, self.clusters_per_label, self.unlabeled_clusters)
 	}
 }
 
@@ -198,7 +213,7 @@ pub(crate) fn find_label_min<'a, L, C>(j_label:C, cluster_records:&CluRec<C>, pl
 			}
 		} else if can_uncolor(cluster_records, cluster_label) {
 			let mut local_best = base_label;
-			if closs[i] < L::zero(){
+			if local_best != cluster_label && closs[i] < L::zero(){
 				local_best = if min < cacc[cluster_label.into_index()] + closs[i] {local_best} else {cluster_label};
 			}else if local_best == cluster_label && closs[i] > L::zero(){
 				local_best = if cacc[local_best.into_index()] + closs[i] < min2 {local_best} else {alt_label};

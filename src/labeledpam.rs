@@ -62,7 +62,10 @@ where
 		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
 	let mut cluster_records = CluRec::<C>::new(med, labels, no_labels);
+	println!("Initial cluster records:\n {}", cluster_records);
 	let (mut loss, mut data): (L, Vec<Rec<N>>) = initial_assignment(mat, labels, &mut cluster_records);
+	cluster_records.update_labels();
+	println!("Cluster Records after initial assignment:\n {}", cluster_records);
 	debug_assert_assignment(mat, &cluster_records.meds, &data);
 	let mut removal_loss = vec![L::zero(); k];
 	update_removal_loss(&mut data, &mut removal_loss, mat, labels, &mut cluster_records);
@@ -85,12 +88,14 @@ where
 			lastswap = j;
 			// perform the swap
 			loss = do_swap(mat, labels, &mut data, &mut cluster_records, j, b, l);
+			cluster_records.update_labels();
 			update_removal_loss(&mut data, &mut removal_loss, mat, labels, &mut cluster_records);
 		}
 		if n_swaps == swaps_before || loss >= lastloss {
 			break; // converged
 		}
 	}
+	println!("Cluster Records at the end:\n {}", cluster_records);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
 	(loss, assi, iter, n_swaps)
 }
@@ -117,28 +122,31 @@ where
 		.iter_mut()
 		.enumerate()
 		.map(|(i, cur)| {
-			*cur = Rec::new(u32::MAX, N::zero(), u32::MAX, N::zero());
+			*cur = Rec::empty();
 			for (m, &me) in cluster_records.meds.iter().enumerate() {
 				if !is_valid_sec_pair(i, labels, m, cluster_records){
 					continue;
 				}
 				let d = mat.get(i, me);
 				if i == me || ((d < cur.near.d || cur.near.i == u32::MAX) && is_valid_pair(i, labels, m, cluster_records)) {
-					cur.seco = cur.near.clone();
+					// in case a unlabeled cluster is found that is closer than 
+					// the currently best one we want to keep that
+					if d <= cur.seco.d || cur.seco.i == u32::MAX {
+						cur.seco = cur.near.clone();
+					}
 					cur.near = DistancePair { i: m as u32, d };
 				} else if cur.seco.i == u32::MAX || d < cur.seco.d {
 					cur.seco = DistancePair { i: m as u32, d };
 				}
 			}
 			debug_assert!(cur.near.i != u32::MAX, "No medoid found for object {}", i);
-			if labels.get(i)>= C::zero(){
+			if labels.get(i) >= C::zero(){
 				cluster_records.label_counts[cur.near.i as usize] += 1;
 			}
 			L::from(cur.near.d.clone())
 		})
 		.reduce(L::add)
 		.unwrap();
-	cluster_records.update_cluster_per_label();
 	(loss, data)
 }
 
@@ -159,11 +167,11 @@ where
 	C: Label,
 	O: LabelAdapter<C>,
 {
-	let j_label = labels.get(j);
-	let mut ploss = removal_loss.to_vec();
-	let mut closs = vec![L::zero(); cluster_records.len()];
-	let mut acc = L::zero();
-	let mut cacc = vec![L::zero(); cluster_records.no_labels()];
+	let j_label = labels.get(j); // label of possible new medoid
+	let mut ploss = removal_loss.to_vec(); // unlabeled loss
+	let mut closs = vec![L::zero(); cluster_records.len()]; // labeled loss
+	let mut acc = L::zero(); // unlabeled benefit
+	let mut cacc = vec![L::zero(); cluster_records.no_labels()]; // colored benefit
 	for (o, reco) in data.iter().enumerate() {
         let o_label = labels.get(o);
 
@@ -196,10 +204,10 @@ where
 			let benefit = L::from(doj.clone()) - L::from(reco.near.d.clone());
 
 			if benefit < L::zero() {
-				ploss[reco.near.i as usize] += benefit;
+				ploss[reco.near.i as usize] += L::from(reco.near.d.clone());
 				cacc[o_label.into_index()] += benefit;
 			} else {
-				ploss[reco.near.i as usize] += L::from(doj.clone());
+				ploss[reco.near.i as usize] += L::from(doj.clone()); // - 0 (dist to second)
 			}
 		}
 	}
@@ -218,6 +226,7 @@ where
 	loss.fill(L::zero()); // stable since 1.50
 	for (i, rec) in data.iter_mut().enumerate() {
 		if rec.seco.i == u32::MAX {
+			// set second closest if possible
 			if can_uncolor(cluster_records, labels.get(i)){
 				rec.seco = update_second_nearest(mat, cluster_records, labels, rec.near.i as usize, u32::MAX as usize, i, N::zero());
 			}
@@ -298,7 +307,10 @@ where
 						cluster_records.label_counts[reco.near.i as usize] -= 1;
 						cluster_records.label_counts[b] += 1;
 					}
-					reco.seco = reco.near.clone();
+					// keep second closest if it was already closer than the clostes
+					if reco.near.d < reco.seco.d || reco.seco.i == u32::MAX{
+						reco.seco = reco.near.clone();
+					}
 				}
 				reco.near = DistancePair::new(b as u32, N::zero());
 				return L::zero();
@@ -306,21 +318,31 @@ where
 			let doj = mat.get(o, j);
 			let obj_color = labels.get(o);
 			let valid_pair = is_valid_pair(o, labels, b, cluster_records);
+			let valid_sec_pair = is_valid_sec_pair(o, labels, b, cluster_records);
 			// Nearest medoid is gone:
 			if reco.near.i == b as u32 {
-				if doj < reco.seco.d || reco.seco.i == u32::MAX{
+				if doj < reco.seco.d || doj < reco.near.d || reco.seco.i == u32::MAX{
+					// 1. keep cluster if it is better than the second clostest
+					// 2. Also keep the cluster if it is better than the old one
+					// not doing 2 is possible but then the loss is not correct.  
 					reco.near = DistancePair::new(b as u32, doj);
 				} else {
 					if obj_color >= C::zero() {
 						cluster_records.label_counts[reco.near.i as usize] -= 1;
 						cluster_records.label_counts[b] += 1;
+						cluster_records.clus_labels[reco.near.i as usize] = l;
 					}
 					reco.near = reco.seco.clone();
-					reco.seco = update_second_nearest(mat, &cluster_records, labels, reco.near.i as usize, if valid_pair{b} else {u32::MAX as usize}, o, if valid_pair {doj} else {N::zero()});
+					reco.seco = if valid_sec_pair{
+									update_second_nearest(mat, &cluster_records, labels, reco.near.i as usize, b, o, doj)
+								} else {
+									update_second_nearest(mat, &cluster_records, labels, reco.near.i as usize, u32::MAX as usize, o, N::zero())
+								};
+					
 				}
 			} else {
 				// nearest not removed
-				if doj < reco.near.d && valid_pair{
+				if doj < reco.near.d && valid_pair {
 					if obj_color >= C::zero() {
 						cluster_records.label_counts[reco.near.i as usize] -= 1;
 						cluster_records.label_counts[b] += 1;
@@ -329,11 +351,15 @@ where
 						reco.seco = reco.near.clone();
 					}
 					reco.near = DistancePair::new(b as u32, doj);
-				} else if doj < reco.seco.d && valid_pair{
+				} else if doj < reco.seco.d && valid_sec_pair{
 					reco.seco = DistancePair::new(b as u32, doj);
 				} else if reco.seco.i == b as u32 {
 					// second nearest was replaced
-					reco.seco = update_second_nearest(mat, cluster_records, labels,  reco.near.i as usize, if valid_pair{b} else {u32::MAX as usize}, o, if valid_pair {doj} else {N::zero()});
+					reco.seco = if valid_sec_pair{
+						update_second_nearest(mat, &cluster_records, labels, reco.near.i as usize, b, o, doj)
+					} else {
+						update_second_nearest(mat, &cluster_records, labels, reco.near.i as usize, u32::MAX as usize, o, N::zero())
+					};
 				}
 			}
 			L::from(reco.near.d.clone())
@@ -348,10 +374,7 @@ where
 	C: Label,
 	O: LabelAdapter<C>,
 {
-	if labels.get(obj) < C::zero() || labels.get(obj) == cluster_records.clus_labels[med]{
-		return true
-	}
-	return false
+	return labels.get(obj) < C::zero() || labels.get(obj) == cluster_records.clus_labels[med]
 }
 
 #[inline]
@@ -360,13 +383,8 @@ where
 	C: Label,
 	O: LabelAdapter<C>,
 {
-	if cluster_records.label_counts[med] == 0{
-		return true
-	} 
-	if labels.get(obj) < C::zero() || labels.get(obj) == cluster_records.clus_labels[med]{
-		return true
-	}
-	return false
+
+	return cluster_records.clus_labels[med] < C::zero() || labels.get(obj) < C::zero() || labels.get(obj) == cluster_records.clus_labels[med]
 }
 
 #[cfg(test)]
@@ -377,14 +395,20 @@ mod tests {
 	#[test]
 	fn testlabeledpam_simple() {
 		let data = LowerTriangle {
-			n: 5,
-			data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+			n: 7,
+			data: vec![ 1, 
+						2, 1, 
+						3, 2, 1, 
+						4, 3, 2, 1,
+						5, 4, 3, 2, 1,
+						6, 5, 4, 3, 2, 1],
 		};
 		let labels = LabelList{
-			data: vec![0, 1, -1, 0,1],
+			data: vec![0, 1, -1, -1, -1, -1, 1],
 		};
-		let mut meds = vec![0, 1, 2];
+		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (i64, _, _, _) = labeledpam(&data, &labels, &mut meds, 2, 10);
+		println!("{:?}", assi);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 4, "loss not as expected");
 		assert_eq!(n_swap, 2, "swaps not as expected");
@@ -406,6 +430,7 @@ mod tests {
 		let mut meds = vec![0, 1];
 		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = labeledpam(&data, &labels, &mut meds, 2, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
+		println!("{:?}", assi);
 		assert_array(assi, vec![0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0], "assignment not as expected");
 		assert_eq!(loss, 0.0, "loss not as expected");
 		assert_eq!(n_swap, 2, "swaps not as expected");
