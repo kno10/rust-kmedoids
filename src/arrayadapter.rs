@@ -4,7 +4,7 @@
 
 use num_traits::{One, Signed, Zero};
 
-use crate::labeltraits::{FromIndex, IntoIndex};
+use crate::labelutils::{FromIndex, IntoIndex};
 
 /// Adapter trait for accessing different types of arrays
 #[allow(clippy::len_without_is_empty)]
