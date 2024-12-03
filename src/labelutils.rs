@@ -204,7 +204,7 @@ pub(crate) fn find_label_min<'a, L, C>(j_label:C, cluster_records:&CluRec<C>, pl
 					best_label = base_label;
 				}
 			} else {
-				let temp_loss = *i_loss + acc + cacc[cluster_label.into_index()];
+				let temp_loss = *i_loss + acc + cacc[j_label.into_index()];
 				if temp_loss < loss {
 					loss = temp_loss;
 					best = i;
