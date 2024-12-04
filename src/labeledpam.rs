@@ -1,5 +1,4 @@
 use crate::arrayadapter::ArrayAdapter;
-use crate::arrayadapter::LabelAdapter;
 use crate::util::*;
 use crate::labelutils::*;
 use core::ops::AddAssign;
@@ -62,10 +61,8 @@ where
 		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
 	let mut cluster_records = CluRec::<C>::new(med, labels, no_labels);
-	println!("Initial cluster records:\n {}", cluster_records);
 	let (mut loss, mut data): (L, Vec<Rec<N>>) = initial_assignment(mat, labels, &mut cluster_records);
 	cluster_records.update_labels();
-	println!("Cluster Records after initial assignment:\n {}", cluster_records);
 	debug_assert_assignment(mat, &cluster_records.meds, &data);
 	let mut removal_loss = vec![L::zero(); k];
 	update_removal_loss(&mut data, &mut removal_loss, mat, labels, &mut cluster_records);
@@ -95,7 +92,6 @@ where
 			break; // converged
 		}
 	}
-	println!("Cluster Records at the end:\n {}", cluster_records);
 	let assi = data.iter().map(|x| x.near.i as usize).collect();
 	(loss, assi, iter, n_swaps)
 }
@@ -122,6 +118,7 @@ where
 		.iter_mut()
 		.enumerate()
 		.map(|(i, cur)| {
+			let obj_label = labels.get(i);
 			*cur = Rec::empty();
 			for (m, &me) in cluster_records.meds.iter().enumerate() {
 				if !is_valid_sec_pair(i, labels, m, cluster_records){
@@ -131,7 +128,7 @@ where
 				if i == me || ((d < cur.near.d || cur.near.i == u32::MAX) && is_valid_pair(i, labels, m, cluster_records)) {
 					// in case a unlabeled cluster is found that is closer than 
 					// the currently best one we want to keep that
-					if d <= cur.seco.d || cur.seco.i == u32::MAX {
+					if cur.near.d <= cur.seco.d || cur.seco.i == u32::MAX {
 						cur.seco = cur.near.clone();
 					}
 					cur.near = DistancePair { i: m as u32, d };
@@ -140,7 +137,7 @@ where
 				}
 			}
 			debug_assert!(cur.near.i != u32::MAX, "No medoid found for object {}", i);
-			if labels.get(i) >= C::zero(){
+			if obj_label >= C::zero(){
 				cluster_records.label_counts[cur.near.i as usize] += 1;
 			}
 			L::from(cur.near.d.clone())
@@ -267,7 +264,7 @@ where
 			continue;
 		}
 		let d = mat.get(o, mi);
-		if d < s.d {
+		if d < s.d || s.i == u32::MAX {
 			s = DistancePair::new(i as u32, d);
 		}
 	}
@@ -316,21 +313,21 @@ where
 				return L::zero();
 			}
 			let doj = mat.get(o, j);
-			let obj_color = labels.get(o);
+			let obj_label = labels.get(o);
 			let valid_pair = is_valid_pair(o, labels, b, cluster_records);
 			let valid_sec_pair = is_valid_sec_pair(o, labels, b, cluster_records);
 			// Nearest medoid is gone:
 			if reco.near.i == b as u32 {
-				if doj < reco.seco.d || doj < reco.near.d || reco.seco.i == u32::MAX{
+				if reco.seco.i == u32::MAX || (valid_pair && (doj < reco.seco.d || doj < reco.near.d)) {
 					// 1. keep cluster if it is better than the second clostest
 					// 2. Also keep the cluster if it is better than the old one
 					// not doing 2 is possible but then the loss is not correct.  
 					reco.near = DistancePair::new(b as u32, doj);
 				} else {
-					if obj_color >= C::zero() {
+					if obj_label >= C::zero() {
 						cluster_records.label_counts[reco.near.i as usize] -= 1;
-						cluster_records.label_counts[b] += 1;
-						cluster_records.clus_labels[reco.near.i as usize] = l;
+						cluster_records.label_counts[reco.seco.i as usize] += 1;
+						cluster_records.clus_labels[reco.seco.i as usize] = obj_label;
 					}
 					reco.near = reco.seco.clone();
 					reco.seco = if valid_sec_pair{
@@ -343,7 +340,7 @@ where
 			} else {
 				// nearest not removed
 				if doj < reco.near.d && valid_pair {
-					if obj_color >= C::zero() {
+					if obj_label >= C::zero() {
 						cluster_records.label_counts[reco.near.i as usize] -= 1;
 						cluster_records.label_counts[b] += 1;
 					}
@@ -374,7 +371,8 @@ where
 	C: Label,
 	O: LabelAdapter<C>,
 {
-	return labels.get(obj) < C::zero() || labels.get(obj) == cluster_records.clus_labels[med]
+	let obj_label = labels.get(obj);
+	obj_label < C::zero() || obj_label == cluster_records.clus_labels[med]
 }
 
 #[inline]
@@ -383,14 +381,14 @@ where
 	C: Label,
 	O: LabelAdapter<C>,
 {
-
-	return cluster_records.clus_labels[med] < C::zero() || labels.get(obj) < C::zero() || labels.get(obj) == cluster_records.clus_labels[med]
+	let obj_label = labels.get(obj);
+	obj_label < C::zero() || obj_label == cluster_records.clus_labels[med] || cluster_records.clus_labels[med] < C::zero()
 }
 
 #[cfg(test)]
 mod tests {
 	// TODO: use a larger, much more interesting example.
-	use crate::{arrayadapter::LowerTriangle, labeledpam, silhouette, util::assert_array, arrayadapter::LabelList};
+	use crate::{arrayadapter::LowerTriangle, labeledpam, silhouette, util::assert_array, labelutils::LabelList};
 
 	#[test]
 	fn testlabeledpam_simple() {
@@ -425,9 +423,9 @@ mod tests {
 			data: vec![1.1879279423816165, 1.2947944788394952, 1.1222122549352096, 1.414307734436693, 1.117735446934769, 1.4388925189516457, 1.8327068332077852, 1.2158016984120257, 1.3989851936005935, 1.426547267449687, 1.423286850371007, 1.230692652011346, 1.1790880402125141, 1.331246985115263, 1.242469101916525, 1.5233457287445324, 1.2908669921560452, 1.8876257455458059, 1.2976864095676097, 1.28487361618566, 1.4508818160764434, 1.5802171015384037, 0.8246468423211168, 1.0770759536026042, 1.1708931778372325, 0.9322451613022035, 1.1341982534581407, 1.392362374901237, 1.3014441889924953, 1.380847866822644, 1.4837217164280534, 1.0976835385015102, 1.3737324456385667, 1.4188274838941966, 1.574619874391499, 1.3076407523174982, 1.4962581844810656, 1.0476639063206692, 1.4238735613602689, 1.1635477475189677, 0.7694415463517579, 1.3918285774375523, 1.063128604792607, 1.2333934305393666, 1.2550881177869355, 1.573817074139927, 1.2663276887473867, 1.5861386067390943, 1.0360849241277867, 1.120456870500434, 1.5190479059695674, 0.8414283805459416, 1.0751032358608699, 1.330087992516393, 1.066536888222489, 1.3650366481566873, 1.003694845959014, 0.7828022614145911, 1.0832759356984953, 1.171191891026838, 1.1282537012411014, 1.7277865316441579, 0.8549108047329211, 1.1457272037679442, 1.240663183247637, 1.4423895400260947, 1.3893649737130662, 1.2598886243958187, 1.1768299594812994, 1.328280986475995, 1.0354059760712688, 1.3516242570674242, 1.568616993928676, 1.0854429766124625, 0.7750454774497934, 1.0948732530122414, 1.252213898560902, 0.9468836176314643, 1.3448066508962166, 1.2772220139970132, 1.1479971281377912, 1.3041195803487524, 0.9882425622445932, 1.3001232706562216, 1.4785655148448364, 1.171230705441449, 0.8671434330685394, 0.9786345009553221, 1.1569454993678685, 1.0387607832316152, 0.3205960525928075, 1.2107621032076297, 1.0385514710713455, 1.2673254235210827, 1.2379698140034194, 1.2429450450953818, 1.5083996115042602, 1.1312208560481458, 1.269908366750285, 1.4467857073756032, 0.8137235116395952, 1.1650543924541379, 1.1866214363817738, 1.2181547292740962, 1.1767000900330242, 1.232500327154175, 1.1959178366794556, 1.266381726261405, 1.2633612352409676, 1.4822434155611741, 1.4590813927580275, 1.7768483317050352, 1.2121259410275416, 1.1047101645940685, 1.432259181864977, 1.6052975739586235, 0.6735500379651631, 1.1173418534512762, 1.259042225384029, 1.2878098394261042, 1.6456323858999995, 1.2769431147066836, 1.2498535260764427, 1.3712828605189429, 0.5611834016961179, 1.2879097421171428, 1.3456173277784909, 0.9089703645095416, 1.2401482903915062, 0.9608180923773559, 0.9933544093135666, 0.9862788845601757, 0.7881557671993221, 0.7527908651132129, 1.1663604629500948, 1.2251300803998495, 1.0551649762366742, 1.1131303105702126, 1.186712419672403, 1.492431874233841, 1.4707166931388924, 1.0766536679320913, 1.2847470336894629, 1.4676235769681403, 1.745418679067234, 1.236396697454031, 1.4434625116329443, 1.4390754491687048, 1.5903499698717873, 1.4182136490771975, 1.1658651730360627, 1.648225792104958, 1.4603645957781444, 1.2552454721093, 0.8438116073585317, 0.9760624968447917, 1.1268639782740255, 1.1003871390369602, 1.0395118723802517, 1.535861802748197, 0.9907646849743126, 1.1470505643206161, 1.0143082132176893, 1.4796203031220336, 0.5369594436234569, 0.9025569854817785, 0.9750677527909336, 0.9990933027634951, 0.8119252089883857, 1.0475345658728665, 1.283886669174992, 1.279498987285217, 1.302419837117496, 1.470415666981714, 1.4438291975904356, 1.5097560390227858, 1.534509918279619, 1.5198757168668877, 1.4839770406541033, 1.111839891171417, 1.2384065273386382, 1.4715621877693774, 1.418948754613172, 0.8383703349546715, 0.8439716659624814, 1.20542846925377, 1.5477559427822039, 1.4191366814755169, 1.5608452845841128, 1.1293346383788976],
 		};
 		let labels = LabelList{
-			data: vec![0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+			data: vec![0, 1, 0, 1, 0, 1, 0, 1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
 		};
-		let mut meds = vec![0, 1];
+		let mut meds = vec![0, 1, 2, 3, 4];
 		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = labeledpam(&data, &labels, &mut meds, 2, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		println!("{:?}", assi);

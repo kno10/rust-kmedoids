@@ -2,10 +2,6 @@
 //!
 //! Includes adapters for `ndarray::Array2` and a serialized lower triangular matrix in a `Vec`.
 
-use num_traits::{One, Signed, Zero};
-
-use crate::labelutils::{FromIndex, IntoIndex};
-
 /// Adapter trait for accessing different types of arrays
 #[allow(clippy::len_without_is_empty)]
 pub trait ArrayAdapter<N> {
@@ -72,47 +68,6 @@ impl<N: Clone + num_traits::Zero> ArrayAdapter<N> for LowerTriangle<N> {
 			std::cmp::Ordering::Equal => N::zero(),
 		}
 	}
-}
-
-#[allow(clippy::len_without_is_empty)]
-pub trait LabelAdapter<N> {
-	/// Get the length of an array structure
-	fn len(&self) -> usize;
-	/// Get the contents at cell x,y
-	fn get(&self, x: usize) -> N;
-}
-
-/// Adapter trait for using `ndarray::Array2` and similar
-#[cfg(feature = "ndarray")]
-impl<A, N> LabelAdapter<N> for ndarray::ArrayBase<A, ndarray::Ix1>
-where
-	A: ndarray::Data<Elem = N>,
-	N: Clone,
-{
-	#[inline]
-	fn len(&self) -> usize {
-		self.shape()[0]
-	}
-	#[inline]
-	fn get(&self, x: usize) -> N {
-		self[[x]].clone()
-	}
-}
-
-pub struct LabelList<N> {
-	pub data: Vec<N>,
-}
-
-impl <N: Zero + One + Signed + PartialOrd + Clone + Copy + IntoIndex +  FromIndex> LabelAdapter<N> for LabelList<N> {
-	#[inline]
-	fn len(&self) -> usize {
-		self.data.len()
-	}
-	#[inline]
-	fn get(&self, x: usize) -> N {
-		self.data[x].clone()
-	}
-	
 }
 
 

@@ -1,8 +1,6 @@
-use std::{fmt::Display, fmt::Debug, ops::AddAssign};
+use std::{fmt::{Debug, Display}, ops::AddAssign, usize};
 
 use num_traits::{AsPrimitive, One, Signed, Zero};
-
-use crate::arrayadapter::LabelAdapter;
 
 
 macro_rules! trait_combiner {
@@ -75,6 +73,46 @@ impl<T: Copy+'static> FromIndex for T where usize: AsPrimitive<T>{
 
 // from_index!(u16, u32, u64, i16, i32, i64);
 
+#[allow(clippy::len_without_is_empty)]
+pub trait LabelAdapter<N>:{
+	/// Get the length of an array structure
+	fn len(&self) -> usize;
+	/// Get the contents at cell x,y
+	fn get(&self, x: usize) -> N;
+}
+
+/// Adapter trait for using `ndarray::Array2` and similar
+#[cfg(feature = "ndarray")]
+impl<A, N> LabelAdapter<N> for ndarray::ArrayBase<A, ndarray::Ix1>
+where
+	A: ndarray::Data<Elem = N>,
+	N: Clone,
+{
+	#[inline]
+	fn len(&self) -> usize {
+		self.shape()[0]
+	}
+	#[inline]
+	fn get(&self, x: usize) -> N {
+		self[[x]].clone()
+	}
+}
+
+pub struct LabelList<N> {
+	pub data: Vec<N>,
+}
+
+impl <N: Zero + One + Signed + PartialOrd + Clone + Copy + IntoIndex +  FromIndex> LabelAdapter<N> for LabelList<N> {
+	#[inline]
+	fn len(&self) -> usize {
+		self.data.len()
+	}
+	#[inline]
+	fn get(&self, x: usize) -> N {
+		self.data[x].clone()
+	}
+}
+
 /// Information kept about the clustering
 #[derive(Debug)]
 pub(crate) struct CluRec<'a, N> 
@@ -131,8 +169,8 @@ impl<'a, N:Label> CluRec<'a, N>
 		self.clusters_per_label.fill(0);
 		self.unlabeled_clusters = 0;
 		for label in self.clus_labels.iter(){
-			if label >= &N::zero(){
-				self.clusters_per_label[label.clone().into_index()] += 1;
+			if *label >= N::zero(){
+				self.clusters_per_label[label.into_index()] += 1;
 			} else {
 				self.unlabeled_clusters += 1;
 			}
@@ -152,13 +190,7 @@ where
 #[inline]
 pub(crate) fn can_uncolor<C: Label>(cluster_records: &CluRec<C>, label:C) -> bool
 {
-	if cluster_records.len() == cluster_records.no_labels(){
-		return false;
-	}
-	if label >= C::zero() && cluster_records.clusters_per_label[label.into_index()] > 1{
-		return true;
-	}
-	return cluster_records.unlabeled_clusters > 0;
+	cluster_records.len() > cluster_records.no_labels() && (cluster_records.unlabeled_clusters > 0 || (label >= C::zero() && cluster_records.clusters_per_label[label.into_index()] > 1))
 }
 
 // find the labeled min (index, value and label)
@@ -172,7 +204,7 @@ pub(crate) fn find_label_min<'a, L, C>(j_label:C, cluster_records:&CluRec<C>, pl
 	let mut alt_label = -C::one();
 	let mut min = L::zero();
 	let mut min2 = L::zero();
-	let mut best = 0;
+	let mut best = usize::MAX;
 	let mut best_label:C = -C::one();
 	let mut loss = L::zero();
 	// if the candidate is not labeled, find the best two colors
@@ -192,6 +224,7 @@ pub(crate) fn find_label_min<'a, L, C>(j_label:C, cluster_records:&CluRec<C>, pl
 	for (i, i_loss) in ploss.iter().enumerate() {
 		let cluster_label = cluster_records.clus_labels[i];
 		if j_label >= C::zero() {
+			debug_assert!(j_label == base_label, "Incompatible labels");
 			if j_label != cluster_label && !can_uncolor(cluster_records, cluster_label){
 				// labels incompatible
 				continue;
@@ -204,6 +237,7 @@ pub(crate) fn find_label_min<'a, L, C>(j_label:C, cluster_records:&CluRec<C>, pl
 					best_label = base_label;
 				}
 			} else {
+				debug_assert!(j_label == base_label, "Incompatible labels");
 				let temp_loss = *i_loss + acc + cacc[j_label.into_index()];
 				if temp_loss < loss {
 					loss = temp_loss;
@@ -243,5 +277,8 @@ pub(crate) fn find_label_min<'a, L, C>(j_label:C, cluster_records:&CluRec<C>, pl
 			}
 		}
 	}
+	// let best_col_old = cluster_records.clus_labels[best];
+	// let best_col_new = best_label;
+	// debug_assert!(best_col_new == best_col_old || can_uncolor(cluster_records, best_col_old));
 	return (best, best_label, loss);
 }
