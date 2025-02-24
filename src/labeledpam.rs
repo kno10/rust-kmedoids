@@ -118,9 +118,13 @@ where
 		.iter_mut()
 		.enumerate()
 		.map(|(i, cur)| {
+			// object index i
+			// object data cur
 			let obj_label = labels.get(i);
 			*cur = Rec::empty();
 			for (m, &me) in cluster_records.meds.iter().enumerate() {
+				//medoid index m
+				//medoid object me
 				if !is_valid_sec_pair(i, labels, m, cluster_records){
 					continue;
 				}
@@ -223,6 +227,7 @@ where
 	loss.fill(L::zero()); // stable since 1.50
 	for (i, rec) in data.iter_mut().enumerate() {
 		if rec.seco.i == u32::MAX {
+			debug_assert!(labels.get(i) >= C::zero(), "label must be non-negative if no alternative cluster is available");
 			// set second closest if possible
 			if can_uncolor(cluster_records, labels.get(i)){
 				rec.seco = update_second_nearest(mat, cluster_records, labels, rec.near.i as usize, u32::MAX as usize, i, N::zero());
@@ -230,7 +235,7 @@ where
 		} else if !is_valid_sec_pair(i, labels, rec.seco.i as usize, cluster_records){
 			rec.seco = update_second_nearest(mat, cluster_records, labels, rec.near.i as usize, u32::MAX as usize, i, N::zero());
 		}
-		debug_assert!(rec.seco.i == u32::MAX || rec.seco.d > N::zero() || rec.near.d == rec.seco.d,"second nearest not valid in update removal loss");
+		debug_assert!(rec.seco.i == u32::MAX || rec.seco.d > N::zero() || rec.near.d == rec.seco.d, "second nearest not valid in update removal loss");
 		loss[rec.near.i as usize] += L::from(rec.seco.d.clone()) - L::from(rec.near.d.clone());
 		debug_assert!(rec.seco.i != rec.near.i,"second nearest same as nearest in update removal loss i: {:?}",rec.seco.i);
 		// as N might be unsigned
@@ -299,7 +304,7 @@ where
 	data.iter_mut()
 		.enumerate()
 		.map(|(o, reco)| {
-			// new medoid
+			// object is new medoid
 			if o == j {
 				if reco.near.i != b as u32 {
 					if labels.get(j) >= C::zero() {
