@@ -1,4 +1,4 @@
-use crate::arrayadapter::{ArrayAdapter};
+use crate::arrayadapter::ArrayAdapter;
 use core::ops::AddAssign;
 use num_traits::{Signed, Zero};
 
@@ -148,6 +148,7 @@ pub(crate) fn choose_medoid_within_partition<M, N, L>(
 }
 
 /// Debug helper function
+#[inline(always)]
 pub(crate) fn debug_assert_assignment<M, N>(_mat: &M, _med: &[usize], _data: &[Rec<N>])
 	where
 		N: PartialOrd + Clone,
