@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut medoids = (0 .. 10).collect::<Vec<usize>>();
 
 	let start = Instant::now();
-	let (loss, _, iter, swaps, _log) : (f64, _, _, _, _)  =  labeledpam(&dist_mat, &labels, &mut medoids, 2, 100);
+	let (loss, _, iter, swaps) : (f64, _, _, _)  =  labeledpam(&dist_mat, &labels, &mut medoids, 2, 100);
 	let duration = start.elapsed();
 	println!("FasterPAM final loss: {}", loss);
 	println!("FasterPAM swaps performed: {}", swaps);

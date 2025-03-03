@@ -1,20 +1,10 @@
 use crate::arrayadapter::ArrayAdapter;
+use crate::types::Distance;
+use crate::types::Label;
+use crate::types::Loss;
 use crate::util::*;
 use crate::labelutils::*;
-use core::ops::AddAssign;
-use std::fmt::Display;
 use std::mem::swap;
-use num_traits::{Signed, Zero};
-use std::convert::From;
-
-#[cfg(feature="logging")]
-macro_rules! log_fmt {
-	($log: ident, $fmt: literal, $($args:tt),*) => { $log.push(format!($fmt, $($args),*)); };
-}
-#[cfg(not(feature="logging"))]
-macro_rules! log_fmt {
-	($log: ident, $fmt: literal, $($args:tt),*) => {};
-}
 
 /// Run the LabeledPAM algorithm.
 ///
@@ -25,8 +15,11 @@ macro_rules! log_fmt {
 /// * type `M` - matrix data type such as `ndarray::Array2` or `kmedoids::arrayadapter::LowerTriangle`
 /// * type `N` - number data type such as `u32` or `f64`
 /// * type `L` - number data type such as `i64` or `f64` for the loss (must be signed)
+/// * type `C` - integer label data type such as `i16` or `i32`
 /// * `mat` - a pairwise distance matrix
+/// * `labels` - a list with a label for each data point
 /// * `med` - the list of medoids
+/// * `no_labels` - the number of distinct labels
 /// * `maxiter` - the maximum number of iterations allowed
 ///
 /// returns a tuple containing:
@@ -39,6 +32,7 @@ macro_rules! log_fmt {
 ///
 /// * panics when the dissimilarity matrix is not square
 /// * panics when k is 0 or larger than N
+/// * panics when the number of distinct labels is larger than the number of medoids
 ///
 /// ## Example
 /// Given a dissimilarity matrix of size 4 x 4, use:
@@ -54,23 +48,21 @@ pub fn labeledpam<M, N, L,C, O>(
 	med: &mut [usize],
 	no_labels: usize,
 	maxiter: usize,
-) -> (L, Vec<usize>, usize, usize, Vec<String>)
+) -> (L, Vec<usize>, usize, usize)
 where
-	N: Zero + PartialOrd + Clone + std::fmt::Debug,
-	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N> + Copy + Display + FiniteAccuracy,
+	N: Distance,
+	L: Loss<N>,
 	M: ArrayAdapter<N>,
 	C: Label,
 	O: LabelAdapter<C>,
 {
-	#[allow(unused_mut)]
-	let mut log = vec![];
 	let (n, k) = (mat.len(), med.len());
 	assert!(mat.len() == labels.len(), "Labels and matrix must have the same length");
 	assert!(no_labels <= k, "Too many labels {} for the number of medoids {}", no_labels, k);
 	if k == 1 {
 		let assi = vec![0; n];
 		let (swapped, loss) = choose_medoid_within_partition::<M, N, L>(mat, &assi, med, 0);
-		return (loss, assi, 1, if swapped { 1 } else { 0 }, log);
+		return (loss, assi, 1, if swapped { 1 } else { 0 });
 	}
 	let mut cluster_records = ClusterRecords::<C>::new(med, labels, no_labels);
 	let (mut loss, mut data): (L, Vec<Rec<N>>) = initial_assignment(mat, labels, &mut cluster_records);
@@ -82,7 +74,6 @@ where
 	while iter < maxiter {
 		iter += 1;
 		let (swaps_before, last_loss) = (n_swaps, loss.clone());
-		let mut internal_loss = loss.clone();
 		for current_candidate in 0..n {
 			if current_candidate == last_swap {
 				break;
@@ -94,37 +85,19 @@ where
 			if change >= -L::eps() {
 				continue; // No improvement
 			}
-			log_fmt!(
-				log,
-				"Swapping medoid {}: {} replaces {}",
-				best_candidate,
-				current_candidate,
-				{cluster_records.medoid_index_map[best_candidate]}
-			);
-			// println!("Swapping medoid {}: {} replaces {}",b,  j, cluster_records.meds[b]);
-			// println!("Old label {} New label {}", l, cluster_records.clus_labels[b]);
-			// println!("Loss change: {}", change);
 			n_swaps += 1;
 			last_swap = current_candidate;
 			// perform the swap
 			loss = do_swap(mat, labels, &mut data, &mut cluster_records, current_candidate, best_candidate, label);
-			debug_assert!(
-				(loss - (internal_loss + change)).abs() <= L::eps(),
-				"Loss change is not consistent with internal loss: {} vs {}+{} = {}",
-				loss, internal_loss, change, internal_loss + change
-			);
 			cluster_records.update_labels();
 			update_removal_loss(&mut data, &mut removal_loss, mat, labels, &mut cluster_records);
-			debug_assert!(loss < last_loss.slightly_larger());
-			internal_loss = loss;
 		}
-		debug_assert!(loss < last_loss.slightly_larger());
-		if n_swaps == swaps_before {
+		if n_swaps == swaps_before || loss >= last_loss{
 			break; // converged
 		}
 	}
 	let assignments = data.iter().map(|x| x.near.i as usize).collect();
-	(loss, assignments, iter, n_swaps, log)
+	(loss, assignments, iter, n_swaps)
 }
 
 
@@ -132,8 +105,8 @@ where
 #[inline]
 pub(crate) fn initial_assignment<M, N, L, C, O>(mat: &M, labels: &O, cluster_records: &mut ClusterRecords<C>) -> (L, Vec<Rec<N>>)
 where
-	N: Zero + PartialOrd + Clone,
-	L: AddAssign + Zero + PartialOrd + Clone + From<N>,
+	N: Distance,
+	L: Loss<N>,
 	M: ArrayAdapter<N>,
 	C: Label,
 	O: LabelAdapter<C>,
@@ -193,8 +166,8 @@ pub(crate) fn find_best_swap<M, N, L, C, O>(
 	medoid_candidate: usize,
 ) -> (usize, C, L)
 where
-	N: Zero + PartialOrd + Clone,
-	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N> + Copy + FiniteAccuracy,
+	N: Distance,
+	L: Loss<N>,
 	M: ArrayAdapter<N>,
 	C: Label,
 	O: LabelAdapter<C>,
@@ -247,8 +220,8 @@ where
 /// Update the loss when removing each medoid
 pub(crate) fn update_removal_loss<N, L, M, C, O>(data: &mut [Rec<N>], loss: &mut [L], mat: &M, labels: &O, cluster_records: &mut ClusterRecords<C>)
 where
-	N: Zero + PartialOrd + Clone + std::fmt::Debug,
-	L: AddAssign + Signed + Clone + Zero + From<N>,
+	N: Distance,
+	L: Loss<N>,
 	C: Label,
 	O: LabelAdapter<C>,
 	M: ArrayAdapter<N>,
@@ -282,7 +255,7 @@ pub(crate) fn update_second_nearest<M, N, C, O>(
 	obj_idx: usize, // Object index
 ) -> DistancePair<N>
 where
-	N: Zero + PartialOrd + Clone + std::fmt::Debug,
+	N: Distance,
 	M: ArrayAdapter<N>,
 	C: Label,
 	O: LabelAdapter<C>,
@@ -315,8 +288,8 @@ pub(crate) fn do_swap<M, N, L, C, O>(
 	cluster_label: C, // label for medoid j
 ) -> L
 where
-	N: Zero + PartialOrd + Clone + std::fmt::Debug,
-	L: AddAssign + Signed + Zero + PartialOrd + Clone + From<N>,
+	N: Distance,
+	L: Loss<N>,
 	M: ArrayAdapter<N>,
 	C: Label,
 	O: LabelAdapter<C>,
@@ -511,7 +484,7 @@ mod tests {
 			data: vec![0, 1, -1, -1, -1, -1, 1],
 		};
 		let mut meds = vec![0, 6];
-		let (loss, assi, n_iter, n_swap, _log): (f64, _, _, _,_) = labeledpam(&data, &labels, &mut meds, 2, 10);
+		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = labeledpam(&data, &labels, &mut meds, 2, 10);
 		println!("{:?}", assi);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 9., "loss not as expected");
@@ -532,7 +505,7 @@ mod tests {
 			data: vec![0, 1, 0, 1, 0, 1, 0, 1, 0, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
 		};
 		let mut meds = vec![0, 1, 2, 3, 4];
-		let (loss, assi, n_iter, n_swap, _log): (f64, _, _, _, _) = labeledpam(&data, &labels, &mut meds, 2, 10);
+		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = labeledpam(&data, &labels, &mut meds, 2, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		println!("{:?}", assi);
 		assert_array(assi, vec![4, 1, 2, 1, 0, 1, 3, 1, 0, 1, 3, 2, 0, 0, 1, 2, 0, 4, 2, 0], "assignment not as expected");
@@ -554,7 +527,7 @@ mod tests {
 			data: vec![0, 0, -1,-1,-1],
 		};
 		let mut meds = vec![1]; // So we need one swap
-		let (loss, assi, n_iter, n_swap, _log): (f64, _, _, _, _) = labeledpam(&data, &labels, &mut meds, 1, 10);
+		let (loss, assi, n_iter, n_swap): (f64, _, _, _) = labeledpam(&data, &labels, &mut meds, 1, 10);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		assert_eq!(loss, 14., "loss not as expected");
 		assert_eq!(n_swap, 1, "swaps not as expected");
