@@ -1,5 +1,11 @@
 # Changelog
 
+## kmedoids 0.5.4 (2025-09-17)
+
+- no functionality changes
+- update Rust to edition 2024
+- update dependencies (rayon, rand)
+
 ## kmedoids 0.5.3 (2024-12-02)
 
 - no functionality changes

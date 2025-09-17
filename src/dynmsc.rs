@@ -45,7 +45,7 @@ fn _loss<N, L>(a: N, b: N) -> L
 /// Given a dissimilarity matrix of size 4 x 4, use:
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
-/// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+/// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::rng());
 /// let (loss, assi, n_iter, n_swap, meds, losses): (f64, _, _, _, _, _) = kmedoids::dynmsc(&data, &meds, 2, 100);
 /// println!("Loss is: {}", loss);
 /// println!("Best k: {}", meds.len());
@@ -252,7 +252,7 @@ mod tests {
 	#[test]
 	fn testdynmsc_simple() {
 		let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
-		let mut meds = random_initialization(4, 3, &mut rand::thread_rng());
+		let mut meds = random_initialization(4, 3, &mut rand::rng());
 		let (loss, assi, n_iter, n_swap, best_meds, losses): (f64, _, _, _, _, _) = dynmsc(&data, &mut meds, 2,100);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		let (msil, _): (f64, _) = medoid_silhouette(&data, &best_meds, false);
@@ -264,7 +264,7 @@ mod tests {
 	#[test]
 	fn testdynmsc_mink() {
 		let data = ndarray::arr2(&[[0,1,2,3,1],[1,0,4,5,2],[2,4,0,6,3],[3,5,6,0,4],[2,1,5,6,5]]);
-		let mut meds = random_initialization(5, 3, &mut rand::thread_rng());
+		let mut meds = random_initialization(5, 3, &mut rand::rng());
 		let (loss, assi, n_iter, n_swap, best_meds, losses): (f64, _, _, _, _, _) = dynmsc(&data, &mut meds, 1,100);
 		let (sil, _): (f64, _) = silhouette(&data, &assi, false);
 		let (msil, _): (f64, _) = medoid_silhouette(&data, &best_meds, false);

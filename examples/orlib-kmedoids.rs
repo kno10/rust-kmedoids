@@ -83,7 +83,7 @@ where
 fn main() -> Result<(), Box<dyn Error>>{
 	let nam = env::args().nth(1).expect("no file name given");
 	let prob = read_orlib(File::open(nam)?, i32::MAX)?;
-	let mut rand = rand::thread_rng();
+	let mut rand = rand::rng();
 	let start = Instant::now();
 	let mut meds = random_initialization(prob.data.shape()[0], prob.k, &mut rand);
 	let (loss, _, iter, swaps) : (i64, _, _, _) = fasterpam(&prob.data, &mut meds, 100);

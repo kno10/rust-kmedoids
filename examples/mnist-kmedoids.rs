@@ -54,7 +54,7 @@ fn read_mnist(path: String) -> Result<Problem<f64>, Box<dyn Error>>
 fn main() -> Result<(), Box<dyn Error>> {
 	let path = env::args().nth(1).expect("no file name given");
 	let prob = read_mnist(path).unwrap();
-	let mut rand = rand::thread_rng();
+	let mut rand = rand::rng();
 	let start = Instant::now();
 	let mut meds = random_initialization(prob.data.shape()[0], 10, &mut rand);
 	let (loss, _, iter, swaps) : (f64, _, _, _)  = fasterpam(&prob.data, &mut meds, 100);
