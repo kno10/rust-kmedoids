@@ -12,7 +12,7 @@
 ///
 /// Given a dissimilarity matrix of size n x n, use:
 /// ```
-/// let mut meds = kmedoids::random_initialization(10, 2, &mut rand::thread_rng());
+/// let mut meds = kmedoids::random_initialization(10, 2, &mut rand::rng());
 /// println!("Chosen medoids: {:?}", meds);
 /// ```
 #[cfg(feature = "rand")]

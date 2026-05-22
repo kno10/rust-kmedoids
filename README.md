@@ -50,7 +50,7 @@ If you use this code in scientific work, please cite above papers. Thank you.
 
 ```
 let dissim = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
-let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+let mut meds = kmedoids::random_initialization(4, 2, &mut rand::rng());
 let (loss, assingment, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&dissim, &mut meds, 100);
 println!("Loss is: {}", loss);
 ```

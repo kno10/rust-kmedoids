@@ -32,7 +32,7 @@ use std::convert::From;
 /// Given a dissimilarity matrix of size 4 x 4, use:
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
-/// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
+/// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::rng());
 /// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::fasterpam(&data, &mut meds, 100);
 /// println!("Loss is: {}", loss);
 /// ```
@@ -113,8 +113,8 @@ where
 /// Given a dissimilarity matrix of size 4 x 4, use:
 /// ```
 /// let data = ndarray::arr2(&[[0,1,2,3],[1,0,4,5],[2,4,0,6],[3,5,6,0]]);
-/// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::thread_rng());
-/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::rand_fasterpam(&data, &mut meds, 100, &mut rand::thread_rng());
+/// let mut meds = kmedoids::random_initialization(4, 2, &mut rand::rng());
+/// let (loss, assi, n_iter, n_swap): (f64, _, _, _) = kmedoids::rand_fasterpam(&data, &mut meds, 100, &mut rand::rng());
 /// println!("Loss is: {}", loss);
 /// ```
 #[cfg(feature = "rand")]
